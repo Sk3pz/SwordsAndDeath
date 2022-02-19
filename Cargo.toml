@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "snd_server",
+    "snd_client_rs"
+]

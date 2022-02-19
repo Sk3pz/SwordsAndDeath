@@ -2,7 +2,9 @@
 name = "snd_client_rs"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["eric Sk3pz <skepz.dev@gmail.com>"]
+description = "The official SnD client written in rust"
+repository = "https://github.com/Sk3pz/SwordsAndDeath"
+license = "MIT"
 
 [dependencies]
