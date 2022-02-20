@@ -2,10 +2,15 @@ use std::fs::File;
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
+use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use crate::client::handle_connection;
 use crate::config::read_config;
 
 pub mod client;
+pub mod database;
+pub mod item;
+pub mod player;
 mod config;
 
 pub fn systime() -> Duration {
@@ -40,9 +45,11 @@ fn main() {
     \n# defaults to 2277\
     \nport = \"2277\""));
 
+    // set default values for the config
     let mut ip = format!("0.0.0.0");
     let mut port = format!("2277");
 
+    // if the configuration values are set, override defaults
     if let Some(server_conf) = config.server {
         if let Some(cfg_ip) = server_conf.ip {
             ip = cfg_ip;
@@ -56,10 +63,26 @@ fn main() {
     let listener_result = TcpListener::bind(format!("{}:{}", ip, port));
     if listener_result.is_err() {
         eprintln!("Failed to bind listener to ip: {}", listener_result.unwrap_err());
-        // todo(eric): error here
         return;
     }
-
     let listener = listener_result.unwrap();
+
+    // listen for incoming connections
+    for stream in listener.incoming() {
+        let stream_result = stream;
+        if stream_result.is_err() {
+            eprintln!("Failed to accept incoming connection: {}", stream_result.unwrap_err());
+            continue;
+        }
+        let stream = stream_result.unwrap();
+
+        // todo(eric): log connection
+
+        // spawn a new thread with the client handler
+        // todo(eric): better handle connections, maybe through a thread pool?
+        thread::spawn(move || {
+            handle_connection(stream);
+        });
+    }
 
 }
