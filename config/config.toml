@@ -1,0 +1,8 @@
+[server]
+# ip: the ip to listen on
+# surround with '[' and ']' for Ipv6 addresses
+# defaults to 0.0.0.0 and will listen on your machines current IP
+ip = "0.0.0.0"
+# port: the port to listen on
+# defaults to 2277
+port = "2277"

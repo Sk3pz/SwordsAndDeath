@@ -11,3 +11,7 @@ license = "MIT"
 rand = "0.8.5"
 chrono = "0.4.19"
 toml = "0.5.8"
+uuid = { version = "0.8", features = ["serde", "v4"] }
+serde = { version = "*", features = ["derive"] }
+better_term = "1.0.4"
+sqlite = "*"
