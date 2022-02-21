@@ -1,7 +1,7 @@
-use std::fs::{OpenOptions, File};
+use std::fs::OpenOptions;
 use std::fs;
 use std::path::Path;
-use std::io::{Write, Read};
+use std::io::Write;
 use serde::Deserialize;
 use crate::read_config_raw;
 

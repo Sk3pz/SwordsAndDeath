@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::Read;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::path::Path;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::client::handle_connection;
 use crate::config::read_config;
+use crate::database::Database;
 
 pub mod client;
 pub mod database;
@@ -59,6 +60,9 @@ fn main() {
         }
     }
 
+    // create a database instance
+    let database = Database::new("snd.sqlite");
+
     // start listening for connections
     let listener_result = TcpListener::bind(format!("{}:{}", ip, port));
     if listener_result.is_err() {
@@ -81,7 +85,7 @@ fn main() {
         // spawn a new thread with the client handler
         // todo(eric): better handle connections, maybe through a thread pool?
         thread::spawn(move || {
-            handle_connection(stream);
+            handle_connection(stream, &database);
         });
     }
 

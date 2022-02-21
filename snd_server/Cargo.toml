@@ -9,6 +9,7 @@ license = "MIT"
 
 [dependencies]
 rand = "0.8.5"
+rand_distr = "0.4.3"
 chrono = "0.4.19"
 toml = "0.5.8"
 uuid = { version = "0.8", features = ["serde", "v4"] }

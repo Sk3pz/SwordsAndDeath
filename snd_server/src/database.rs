@@ -1,4 +1,3 @@
-use std::fmt::{Display, Formatter};
 use std::process::exit;
 use std::str::FromStr;
 use sqlite::{Connection, State};
@@ -8,7 +7,7 @@ use crate::player::Player;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum LoginFailReason {
-    Unauthorized, Unrecognized, None
+    Unauthorized, Unrecognized
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -93,9 +92,8 @@ impl Database {
         }
 
         if state.unwrap() == State::Row {
-            let val = statement.read::<String>(0);
-            if val.is_ok() {
-                return Some(val.unwrap());
+            if let Ok(val) = statement.read::<String>(0) {
+                return Some(val);
             }
         }
 
@@ -114,9 +112,8 @@ impl Database {
     pub fn get_u32<S: Into<String>>(&self, select: S, from: S, key: S, where_key_is: S) -> Option<u32> {
         let value = self.get_value(select, from, key, where_key_is);
         if value.is_some() {
-            let to_u32 = value.unwrap().parse::<u32>();
-            if to_u32.is_ok() {
-                return Some(to_u32.unwrap());
+            if let Ok(val) = value.unwrap().parse::<u32>() {
+                return Some(val);
             }
         }
         None
@@ -131,6 +128,23 @@ impl Database {
         return if let Some(s) = v {
             Some(Uuid::from_str(s.as_str()).expect(format!("Invalid UUID in database at username {}", username).as_str()))
         } else { None }
+    }
+
+    pub fn validate_login(&self, username: String, password: String) -> Result<Uuid, LoginFailReason> {
+        let attempt_uuid = self.uuid_from_username(username);
+        if attempt_uuid.is_none() {
+            return Err(LoginFailReason::Unrecognized);
+        }
+        let uuid = attempt_uuid.unwrap();
+        let found_pass = self.get_player_value(&uuid, PlayerValueDB::Password);
+
+        if let Some(p) = found_pass {
+            if p == password {
+                return Ok(uuid);
+            }
+        }
+
+        Err(LoginFailReason::Unauthorized)
     }
 
     pub fn get_player_items(&self, owner_uuid: &Uuid) -> Option<Vec<Item>> {

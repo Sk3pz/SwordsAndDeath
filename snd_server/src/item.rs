@@ -1,3 +1,7 @@
+use rand::{Rng, thread_rng};
+use rand::prelude::ThreadRng;
+use rand_distr::{Normal, Distribution};
+use rand_distr::num_traits::real::Real;
 use uuid::Uuid;
 use crate::database::ItemValueDB;
 
@@ -39,6 +43,31 @@ pub enum ItemRarity {
     Common, Rare, Epic, Legendary
 }
 
+impl ItemRarity {
+    pub fn new_rand() -> Self {
+        let rng = thread_rng().gen_range(0..100);
+        match rng {
+            _ if rng < 20 => Self::Rare,      // 30% chance
+            _ if rng < 35 => Self::Epic,      // 15% chance
+            100           => Self::Legendary, // 1% chance
+            _             => Self::Common     // 55% chance
+        }
+    }
+
+    pub fn get_multiplier(&self) -> u32 {
+        match self {
+            Self::Common => 1,
+            Self::Rare => 2,
+            Self::Epic => 5,
+            Self::Legendary => 10,
+        }
+    }
+
+    pub fn get_weight(&self, level: u32) -> u32 {
+        self.get_multiplier() * (level / ((level / 2).max(1)))
+    }
+}
+
 impl Into<u32> for ItemRarity {
     fn into(self) -> u32 {
         match self {
@@ -75,8 +104,36 @@ pub struct Item {
 
 impl Item {
 
-    pub fn new_rand(target_level: u32) -> Self {
-        todo!()
+    pub fn new_rand(item_type: ItemType, owner: Uuid, around_level: u32, rarity: ItemRarity) -> Self {
+        // generate a random item name (based on type and possibly level / rarity?)
+        let name = format!("TD:NG"); // todo(eric): Name Generator (NG)
+
+        // generate the item's level
+        let normal = Normal::new(around_level as f32, 5.5)
+            .expect("Failed to create Normal Distribution for item generation.");
+        let level = normal.sample(&mut thread_rng())
+            .round().max(1.0) as u32;
+
+        // set defaults
+        let mut damage: u32 = 0;
+        let mut defense: u32 = 0;
+
+        // generate defense or damage value depending on item type
+        let val_norm = Normal::new(
+            rarity.get_weight(level.clone()) as f32, 2.2
+        ).expect("Failed to create Normal Distribution for item weight generation.");
+        let weighted_value = val_norm.sample(&mut thread_rng())
+            .round().max(1.0) as u32;
+
+        match item_type {
+            ItemType::Sword => damage = weighted_value,
+            _ => defense = weighted_value,
+        }
+
+        Self {
+            uuid: Uuid::new_v4(),
+            owner, name, item_type, rarity, level, damage, defense,
+        }
     }
 
     pub fn get_value_from_ivdb(&self, ivdb: ItemValueDB) -> String {
