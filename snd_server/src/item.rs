@@ -1,7 +1,5 @@
 use rand::{Rng, thread_rng};
-use rand::prelude::ThreadRng;
 use rand_distr::{Normal, Distribution};
-use rand_distr::num_traits::real::Real;
 use uuid::Uuid;
 use crate::database::ItemValueDB;
 

@@ -16,3 +16,4 @@ uuid = { version = "0.8", features = ["serde", "v4"] }
 serde = { version = "*", features = ["derive"] }
 better_term = "1.0.4"
 sqlite = "*"
+capnp = "0.14.5"

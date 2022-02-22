@@ -7,7 +7,7 @@ use crate::player::Player;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum LoginFailReason {
-    Unauthorized, Unrecognized
+    Unauthorized, Unrecognized, AlreadyOnline,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -136,8 +136,14 @@ impl Database {
             return Err(LoginFailReason::Unrecognized);
         }
         let uuid = attempt_uuid.unwrap();
-        let found_pass = self.get_player_value(&uuid, PlayerValueDB::Password);
 
+        if let Some(active) = self.get_player_value(&uuid, PlayerValueDB::Active) {
+            if active.as_str() == "1" {
+                return Err(LoginFailReason::AlreadyOnline);
+            }
+        }
+
+        let found_pass = self.get_player_value(&uuid, PlayerValueDB::Password);
         if let Some(p) = found_pass {
             if p == password {
                 return Ok(uuid);
@@ -163,18 +169,24 @@ impl Database {
                 if val.is_some() {
                     let v = val.unwrap();
                     match *col {
-                        "uuid" => uuid = Uuid::from_str(v).expect(format!("Failed to get uuid from item - invalid uuid: {}", v).as_str()),
+                        "uuid" => uuid = Uuid::from_str(v)
+                            .expect(format!("Failed to get uuid from item - invalid uuid: {}", v).as_str()),
                         "type" => item_type = ItemType::from(v.parse::<u32>()
-                            .expect(format!("Invalid type value in database in item owned by {}: '{}' should be integer", uuid.to_string(), v).as_str())),
+                            .expect(format!("Invalid type value in database in item owned by {}: '{}' should be integer",
+                                            uuid.to_string(), v).as_str())),
                         "name" => name = v.to_string(),
                         "level" => level = v.parse::<u32>()
-                            .expect(format!("Invalid level value in database in item owned by {}: '{}' should be integer", uuid.to_string(), v).as_str()),
+                            .expect(format!("Invalid level value in database in item owned by {}: '{}' should be integer",
+                                            uuid.to_string(), v).as_str()),
                         "damage" => damage = v.parse::<u32>()
-                            .expect(format!("Invalid damage value in database in item owned by {}: '{}' should be integer", uuid.to_string(), v).as_str()),
+                            .expect(format!("Invalid damage value in database in item owned by {}: '{}' should be integer",
+                                            uuid.to_string(), v).as_str()),
                         "defense" => defense = v.parse::<u32>()
-                            .expect(format!("Invalid defense value in database in item owned by {}: '{}' should be integer", uuid.to_string(), v).as_str()),
+                            .expect(format!("Invalid defense value in database in item owned by {}: '{}' should be integer",
+                                            uuid.to_string(), v).as_str()),
                         "rarity" => rarity = ItemRarity::from(v.parse::<u32>()
-                            .expect(format!("Invalid rarity value in database in item owned by {}: '{}' should be integer", uuid.to_string(), v).as_str())),
+                            .expect(format!("Invalid rarity value in database in item owned by {}: '{}' should be integer",
+                                            uuid.to_string(), v).as_str())),
                         _ => {}
                     }
                 }
@@ -221,6 +233,13 @@ impl Database {
                     item.owner.to_string(), item.item_type as u32, item.level, item.damage, item.defense, "NONE", item.name, item.uuid, item.rarity as u32));
 
         r.is_ok()
+    }
+
+    pub fn item_uuid_from_name(&self, name: String) -> Option<Uuid> {
+        let v = self.get_value("uuid", "items", "name", name.as_str());
+        return if let Some(s) = v {
+            Some(Uuid::from_str(s.as_str()).expect(format!("Invalid UUID in database at item name {}", name).as_str()))
+        } else { None }
     }
 
     pub fn update_item(&self, item: &Item) -> bool {

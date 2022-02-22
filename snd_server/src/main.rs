@@ -6,13 +6,23 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::client::handle_connection;
 use crate::config::read_config;
-use crate::database::Database;
 
 pub mod client;
 pub mod database;
 pub mod item;
 pub mod player;
+pub mod network;
+pub mod packet_capnp;
 mod config;
+
+/***
+ * Todo(eric):
+ *  - Add merchants
+ *  - Handle exploit where users can disconnect while in encounter and end encounter
+ *  - Password recovery?
+***/
+
+pub const ACCEPTED_CLIENT_VERSION: &str = "0.1.0";
 
 pub fn systime() -> Duration {
     SystemTime::now()
@@ -32,6 +42,9 @@ pub fn read_config_raw(file: &mut File) -> String {
 }
 
 fn main() {
+    // create MOTD
+    let motd = format!("Swords And Death Server v{} written by Eric Shreve", env!("CARGO_PKG_VERSION"));
+
     // handle configuration
     let cdir = std::env::current_dir().expect("Error in attempting to get config file: no access.");
     let current_dir = cdir.as_path().to_str().expect("Error in attempting to get config file: no access.");
@@ -60,9 +73,6 @@ fn main() {
         }
     }
 
-    // create a database instance
-    let database = Database::new("snd.sqlite");
-
     // start listening for connections
     let listener_result = TcpListener::bind(format!("{}:{}", ip, port));
     if listener_result.is_err() {
@@ -85,7 +95,7 @@ fn main() {
         // spawn a new thread with the client handler
         // todo(eric): better handle connections, maybe through a thread pool?
         thread::spawn(move || {
-            handle_connection(stream, &database);
+            handle_connection(stream);
         });
     }
 
