@@ -9,3 +9,5 @@ license = "MIT"
 
 [dependencies]
 snd_network_lib = { path="../snd_network_lib" }
+regex = "1.5.4"
+better_term = "1.0.4"

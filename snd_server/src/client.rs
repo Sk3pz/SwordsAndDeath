@@ -1,8 +1,9 @@
 use std::net::TcpStream;
 use std::time::SystemTime;
 use uuid::Uuid;
-use crate::{ACCEPTED_CLIENT_VERSION, KEEPALIVE_INTERVAL, MOTD, SERVER_VERSION, to_epoch};
+use crate::{ACCEPTED_CLIENT_VERSION, KEEPALIVE_INTERVAL, MOTD, SERVER_VERSION};
 use crate::database::{Database, LoginFailReason};
+use snd_network_lib::to_epoch;
 use snd_network_lib::client_event::{ClientEvent, read_client_event};
 use snd_network_lib::entry_point_io::read_entry_point;
 use snd_network_lib::entry_response::{write_invalid_entry_response, write_ping_entry_response, write_valid_entry_response};
@@ -12,7 +13,6 @@ use crate::player::Player;
 
 pub fn handle_connection(stream: TcpStream) {
     // handle an incoming request
-
     let ip_res = stream.peer_addr();
     let ip = if ip_res.is_err() {
         format!("<INVALID IP: {}>", ip_res.unwrap_err())
@@ -47,31 +47,36 @@ pub fn handle_connection(stream: TcpStream) {
     // there should be no two threads accessing the same data in the database.
     let database = Database::new("snd.sqlite");
 
+    // handle logging in and signup
     let login_data = login.unwrap();
     let mut uuid = Uuid::new_v4();
     let username;
 
     if login_data.signup {
-        if database.player_exists(login_data.username.clone()) {
-            if let Err(e) = write_invalid_entry_response(&stream, "Username already exists") {
-                eprintln!("Failed to write error to {}: {}", ip, e);
-            }
-            return;
-        }
-        if !login_data.username.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
+        // validate signup data
+        username = login_data.username.escape_debug().to_string();
+
+        if !username.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
             if let Err(e) = write_invalid_entry_response(&stream, "Username must be only letters, numbers, and underscores") {
                 eprintln!("Failed to write error to {}: {}", ip, e);
             }
             return;
         }
-        if login_data.username.len() < 3 {
+        if username.len() < 3 {
             if let Err(e) = write_invalid_entry_response(&stream, "Username is too short") {
                 eprintln!("Failed to write error to {}: {}", ip, e);
             }
             return;
         }
-        if login_data.username.len() > 16 {
+        if username.len() > 16 {
             if let Err(e) = write_invalid_entry_response(&stream, "Username is too long") {
+                eprintln!("Failed to write error to {}: {}", ip, e);
+            }
+            return;
+        }
+
+        if database.player_exists(username.clone()) {
+            if let Err(e) = write_invalid_entry_response(&stream, "Username already exists") {
                 eprintln!("Failed to write error to {}: {}", ip, e);
             }
             return;
@@ -86,13 +91,13 @@ pub fn handle_connection(stream: TcpStream) {
             }
             return;
         }
-        if login_data.passwd.len() < 4 {
+        if passwd.len() < 4 {
             if let Err(e) = write_invalid_entry_response(&stream, "Password is too short") {
                 eprintln!("Failed to write error to {}: {}", ip, e);
             }
             return;
         }
-        if login_data.passwd.len() > 32 {
+        if passwd.len() > 32 {
             if let Err(e) = write_invalid_entry_response(&stream, "Password is too long") {
                 eprintln!("Failed to write error to {}: {}", ip, e);
             }
@@ -110,10 +115,12 @@ pub fn handle_connection(stream: TcpStream) {
             return;
         }
 
-        username = login_data.username;
-
     } else {
-        let attempt = database.validate_login(login_data.username.clone(), login_data.passwd);
+        // avoid sql injections
+        username = login_data.username.escape_debug().to_string();
+        let passwd = login_data.passwd.escape_debug().to_string();
+
+        let attempt = database.validate_login(username.clone(), passwd);
         if let Err(err) = attempt {
             let res = match err {
                 LoginFailReason::Unrecognized => write_invalid_entry_response(&stream, "Invalid User"),
@@ -125,7 +132,7 @@ pub fn handle_connection(stream: TcpStream) {
             }
             return;
         }
-        let set_uuid = database.uuid_from_username(login_data.username.clone());
+        let set_uuid = database.uuid_from_username(username.clone());
         if set_uuid.is_none() {
             if let Err(e) = write_invalid_entry_response(&stream, "Failed to find user"){
                 eprintln!("Failed to write error to {}: {}", ip, e);
@@ -133,7 +140,6 @@ pub fn handle_connection(stream: TcpStream) {
             return;
         }
         uuid = set_uuid.unwrap();
-        username = login_data.username;
     };
 
     if let Err(e) = write_valid_entry_response(&stream, MOTD.to_string()) {
@@ -147,7 +153,7 @@ pub fn handle_connection(stream: TcpStream) {
 
     database.set_player_active(&uuid);
 
-    // todo(eric): main game loop here
+    // game loop
     loop {
         // check keepalive
         let now = SystemTime::now();
@@ -175,25 +181,30 @@ pub fn handle_connection(stream: TcpStream) {
         let event = read_client_event(&stream);
         match event {
             ClientEvent::Disconnect => {
+                // if the user sends that it disconnected, drop the connection properly
                 break;
             }
             ClientEvent::KeepAlive(a) => {
+                // for handling user disconnects and timeouts
                 if !expecting_keepalive {
                     // Not expecting a keepalive, ignore
                     continue;
                 }
-                ping = a - to_epoch(last_keepalive).as_secs();
+                // calculate the ping
+                ping = a - to_epoch(last_keepalive).as_secs() - KEEPALIVE_INTERVAL;
+                // set flag
                 expecting_keepalive = false;
             }
             ClientEvent::Step => {
                 // todo(eric): game logic
             }
             ClientEvent::OpenInv => {
+                // get the player's inventory from the database and send it to the client to display
                 let inv = database.get_player_items(&uuid);
                 if let Err(e) = write_server_inventory(&stream,
                                                        inv.unwrap_or(Vec::new())
                                                            .iter().map(|i| { i.as_data() }).collect::<Vec<ItemData>>()) {
-                    eprintln!("error sending to {}: {}", ip, e);
+                    eprintln!("error sending inventory to {}: {}", ip, e);
                     break;
                 }
             }

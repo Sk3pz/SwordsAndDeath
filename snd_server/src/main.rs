@@ -25,17 +25,6 @@ pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const MOTD: &str = "Welcome to SnD! We are still in ALPHA, so expect some bugs!";
 pub const KEEPALIVE_INTERVAL: u64 = 20; // time in seconds to send the keepalive packet
 
-pub fn systime() -> Duration {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Fatal error occurred: System time moved backwards! Are you a time traveler?")
-}
-
-pub fn to_epoch(time: SystemTime) -> Duration {
-    time.duration_since(UNIX_EPOCH)
-        .expect("Fatal error occurred: System time moved backwards! Are you a time traveler?")
-}
-
 pub fn read_config_raw(file: &mut File) -> String {
     let mut config_content = String::new();
     file.read_to_string(&mut config_content)
