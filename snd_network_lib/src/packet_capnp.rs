@@ -1261,7 +1261,7 @@ pub mod loot {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>> {
+    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
     pub fn has_items(&self) -> bool {
@@ -1322,15 +1322,15 @@ pub mod loot {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned>> {
+    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_items(&mut self, value: ::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
+    pub fn set_items(&mut self, value: ::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_items(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned> {
+    pub fn init_items(self, size: u32) -> ::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
     pub fn has_items(&self) -> bool {
@@ -1716,12 +1716,12 @@ pub mod s_event {
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn set_inventory(&mut self, value: ::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
+    pub fn set_inventory(&mut self, value: ::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
       self.builder.set_data_field::<u16>(1, 5);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_inventory(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned> {
+    pub fn init_inventory(self, size: u32) -> ::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned> {
       self.builder.set_data_field::<u16>(1, 5);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
@@ -1828,8 +1828,8 @@ pub mod s_event {
     ItemView(A3),
     Error(A4),
   }
-  pub type WhichReader<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::encounter::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::error::Reader<'a>>>;
-  pub type WhichBuilder<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::encounter::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::error::Builder<'a>>>;
+  pub type WhichReader<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::encounter::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::error::Reader<'a>>>;
+  pub type WhichBuilder<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::encounter::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::error::Builder<'a>>>;
 }
 
 pub mod c_event {

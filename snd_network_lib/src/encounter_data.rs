@@ -1,5 +1,5 @@
-use crate::network::enemy_data::EnemyData;
-use crate::network::loot_data::LootData;
+use crate::enemy_data::EnemyData;
+use crate::loot_data::LootData;
 
 #[derive(Clone, Debug)]
 pub struct EncounterData {

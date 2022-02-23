@@ -2,7 +2,7 @@ use rand::{Rng, thread_rng};
 use rand_distr::{Normal, Distribution};
 use uuid::Uuid;
 use crate::database::ItemValueDB;
-use crate::network::item_data::ItemData;
+use snd_network_lib::item_data::ItemData;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ItemType {

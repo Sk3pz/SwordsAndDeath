@@ -8,3 +8,4 @@ repository = "https://github.com/Sk3pz/SwordsAndDeath"
 license = "MIT"
 
 [dependencies]
+snd_network_lib = { path="../snd_network_lib" }

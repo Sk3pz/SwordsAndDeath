@@ -11,8 +11,6 @@ pub mod client;
 pub mod database;
 pub mod item;
 pub mod player;
-pub mod network;
-pub mod packet_capnp;
 mod config;
 
 /***

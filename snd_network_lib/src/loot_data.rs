@@ -1,4 +1,4 @@
-use crate::network::item_data::ItemData;
+use crate::item_data::ItemData;
 
 #[derive(Clone, Debug)]
 pub struct LootData {

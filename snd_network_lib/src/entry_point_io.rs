@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 use capnp::message::Builder;
 use capnp::serialize;
-use crate::network::login_data::LoginData;
+use crate::login_data::LoginData;
 use crate::packet_capnp::entry_point;
 
 pub fn write_entry_point_ver(mut stream: &TcpStream, version: String) -> ::capnp::Result<()> {

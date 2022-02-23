@@ -3,11 +3,11 @@ use std::time::SystemTime;
 use uuid::Uuid;
 use crate::{ACCEPTED_CLIENT_VERSION, KEEPALIVE_INTERVAL, MOTD, SERVER_VERSION, to_epoch};
 use crate::database::{Database, LoginFailReason};
-use crate::network::client_event::{ClientEvent, read_client_event};
-use crate::network::entry_point_io::read_entry_point;
-use crate::network::entry_response::{write_invalid_entry_response, write_ping_entry_response, write_valid_entry_response};
-use crate::network::item_data::ItemData;
-use crate::network::server_event::{write_server_disconnect, write_server_inventory, write_server_keepalive};
+use snd_network_lib::client_event::{ClientEvent, read_client_event};
+use snd_network_lib::entry_point_io::read_entry_point;
+use snd_network_lib::entry_response::{write_invalid_entry_response, write_ping_entry_response, write_valid_entry_response};
+use snd_network_lib::item_data::ItemData;
+use snd_network_lib::server_event::{write_server_disconnect, write_server_inventory, write_server_keepalive};
 use crate::player::Player;
 
 pub fn handle_connection(stream: TcpStream) {
@@ -47,7 +47,6 @@ pub fn handle_connection(stream: TcpStream) {
     // there should be no two threads accessing the same data in the database.
     let database = Database::new("snd.sqlite");
 
-    // todo(eric): login system here
     let login_data = login.unwrap();
     let mut uuid = Uuid::new_v4();
     let username;

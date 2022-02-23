@@ -1,12 +1,12 @@
 use std::net::TcpStream;
 use capnp::message::Builder;
 use capnp::serialize;
-use crate::network::enemy_data::EnemyData;
-use crate::network::error_data::ErrorData;
-use crate::network::item_data::ItemData;
+use crate::enemy_data::EnemyData;
+use crate::error_data::ErrorData;
+use crate::item_data::ItemData;
 use crate::{packet_capnp, systime};
-use crate::network::encounter_data::EncounterData;
-use crate::network::loot_data::LootData;
+use crate::encounter_data::EncounterData;
+use crate::loot_data::LootData;
 use crate::packet_capnp::{encounter, s_event};
 
 #[derive(Clone, Debug)]

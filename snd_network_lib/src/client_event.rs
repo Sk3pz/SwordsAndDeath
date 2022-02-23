@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 use capnp::message::Builder;
 use capnp::serialize;
-use crate::network::error_data::ErrorData;
+use crate::error_data::ErrorData;
 use crate::packet_capnp::c_event;
 use crate::systime;
 
