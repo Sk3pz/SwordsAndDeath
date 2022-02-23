@@ -1,0 +1,8 @@
+[package]
+name = "snd_network_lib"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+capnp = "*"
