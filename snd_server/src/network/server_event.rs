@@ -10,28 +10,15 @@ use crate::network::loot_data::LootData;
 use crate::packet_capnp::{encounter, s_event};
 
 #[derive(Clone, Debug)]
-pub struct ServerEvent {
-    pub disconnect: Option<bool>,
-    pub keepalive: Option<u64>,
-    pub gain_exp: Option<u32>,
-    pub find_item: Option<ItemData>,
-    pub encounter: Option<EncounterData>,
-    pub inventory: Option<Vec<ItemData>>,
-    pub item_view: Option<ItemData>,
-    pub error: Option<ErrorData>,
-}
-
-impl ServerEvent {
-    pub fn new(disconnect: Option<bool>, keepalive: Option<u64>, gain_exp: Option<u32>,
-               find_item: Option<ItemData>, encounter: Option<EncounterData>,
-               inventory: Option<Vec<ItemData>>, item_view: Option<ItemData>,
-               error: Option<ErrorData>) -> Self {
-        Self {
-            disconnect, keepalive, gain_exp,
-            find_item, encounter, inventory,
-            item_view, error,
-        }
-    }
+pub enum ServerEvent {
+    Disconnect,
+    Keepalive(u64),
+    GainExp(u32),
+    FindItem(ItemData),
+    Encounter(EncounterData),
+    Inventory(Vec<ItemData>),
+    ItemView(ItemData),
+    Error(ErrorData),
 }
 
 pub fn write_server_disconnect(mut stream: &TcpStream) -> ::capnp::Result<()> {
@@ -195,48 +182,30 @@ pub fn write_server_error(mut stream: &TcpStream, error: ErrorData) -> ::capnp::
 pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
     let message_reader_result = serialize::read_message(&mut stream, ::capnp::message::ReaderOptions::new());
     if message_reader_result.is_err() {
-        return ServerEvent::new(None, None, None,
-                                None, None, None,
-                                None,
-                                Some(ErrorData { msg: format!("Read invalid packet from server!"), disconnect: true }));
+        return ServerEvent::Error(ErrorData { msg: format!("Read invalid packet from server!"), disconnect: true });
     }
     let message_reader = message_reader_result.unwrap();
     let er_raw = message_reader.get_root::<s_event::Reader>();
     if er_raw.is_err() {
-        return ServerEvent::new(None, None, None,
-                                None, None, None,
-                                None,
-                                Some(ErrorData { msg: format!("Read invalid packet from server!"), disconnect: true }));
+        return ServerEvent::Error(ErrorData { msg: format!("Read invalid packet from server!"), disconnect: true });
     }
     let er = er_raw.unwrap();
 
     let which = er.which();
 
     if let Err(err) = which {
-        return ServerEvent::new(None, None, None,
-                                None, None, None,
-                                None,
-                                Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+        return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
     }
 
     match which.unwrap() {
-        s_event::Disconnect(b) => ServerEvent::new(Some(b), None, None,
-                                                          None, None, None,
-                                                          None, None),
-        s_event::Keepalive(v) => ServerEvent::new(None, Some(v), None,
-                                                  None, None, None,
-                                                  None, None),
-        s_event::GainExp(v) => ServerEvent::new(None, None, Some(v),
-                                                None, None, None,
-                                                None, None),
+        s_event::Disconnect(_) => ServerEvent::Disconnect,
+        s_event::Keepalive(v) => ServerEvent::Keepalive(v),
+        s_event::GainExp(v) => ServerEvent::GainExp(v),
         s_event::FindItem(id_reader) => {
             let raw_id = id_reader.unwrap();
             let id_r_which = raw_id.which();
             if let Err(err) = id_r_which {
-                return ServerEvent::new(None, None, None,
-                                        None, None, None,
-                                        None,
-                                        Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+                return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
             }
             let mut defense: Option<u32> = None;
             let mut damage: Option<u32> = None;
@@ -253,18 +222,13 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
                 defense, damage
             };
 
-            ServerEvent::new(None, None, None,
-                             Some(found), None, None,
-                             None, None)
+            ServerEvent::FindItem(found)
         }
         s_event::Encounter(ed_reader) => {
             let emy = ed_reader.unwrap();
             let which = emy.which();
             if let Err(err) = which {
-                return ServerEvent::new(None, None, None,
-                                        None, None, None,
-                                        None,
-                                        Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+                return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
             }
             let enemy = emy.get_enemy().unwrap();
             let emydata = EnemyData {
@@ -301,10 +265,7 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
                     for i in loot_i {
                         let iwhich = i.which();
                         if let Err(err) = iwhich {
-                            return ServerEvent::new(None, None, None,
-                                                    None, None, None,
-                                                    None,
-                                                    Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+                            return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
                         }
                         let w = iwhich.unwrap();
                         let mut damage: Option<u32> = None;
@@ -335,10 +296,7 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
                     }
                 }
             };
-            ServerEvent::new(None, None, None,
-                             None,
-                             Some(edata), None,
-                             None, None)
+            ServerEvent::Encounter(edata)
         }
         s_event::Inventory(inv_reader) => {
             let inv = inv_reader.unwrap();
@@ -346,10 +304,7 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
             for item in inv.into_iter() {
                 let iwhich = item.which();
                 if let Err(err) = iwhich {
-                    return ServerEvent::new(None, None, None,
-                                            None, None, None,
-                                            None,
-                                            Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+                    return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
                 }
                 let w = iwhich.unwrap();
                 let mut damage: Option<u32> = None;
@@ -369,18 +324,13 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
                 });
             }
 
-            ServerEvent::new(None, None, None,
-                             None, None, Some(items),
-                             None, None)
+            ServerEvent::Inventory(items)
         }
         s_event::ItemView(item_reader) => {
             let raw_id = item_reader.unwrap();
             let id_r_which = raw_id.which();
             if let Err(err) = id_r_which {
-                return ServerEvent::new(None, None, None,
-                                        None, None, None,
-                                        None,
-                                        Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+                return ServerEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
             }
             let mut defense: Option<u32> = None;
             let mut damage: Option<u32> = None;
@@ -397,18 +347,14 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
                 defense, damage
             };
 
-            ServerEvent::new(None, None, None,
-                             None, None, None,
-                             Some(item), None)
+            ServerEvent::ItemView(item)
         }
         s_event::Error(err_reader) => {
             let err = err_reader.unwrap();
-            ServerEvent::new(None, None, None,
-                             None, None, None,
-                             None, Some(ErrorData {
+            ServerEvent::Error(ErrorData {
                     msg: err.get_error().unwrap().to_string(),
                     disconnect: err.get_disconnect()
-                }))
+                })
         }
     }
 }

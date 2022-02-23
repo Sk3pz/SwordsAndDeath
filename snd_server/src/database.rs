@@ -81,7 +81,7 @@ impl Database {
 
     pub fn get_value<S: Into<String>>(&self, select: S, from: S, key: S, where_key_is: S) -> Option<String> {
         let mut statement = self.connection
-            .prepare(format!("SELECT {} FROM {} WHERE {} IS '{}'",
+            .prepare(format!("SELECT '{}' FROM '{}' WHERE '{}' IS '{}'",
             select.into(), from.into(), key.into(), where_key_is.into()))
             .expect("Failed to prepare statement for database interaction.");
 
@@ -148,9 +148,15 @@ impl Database {
             if p == password {
                 return Ok(uuid);
             }
+        } else {
+            return Err(LoginFailReason::Unrecognized);
         }
 
         Err(LoginFailReason::Unauthorized)
+    }
+
+    pub fn player_exists(&self, username: String) -> bool {
+        self.uuid_from_username(username).is_some()
     }
 
     pub fn get_player_items(&self, owner_uuid: &Uuid) -> Option<Vec<Item>> {

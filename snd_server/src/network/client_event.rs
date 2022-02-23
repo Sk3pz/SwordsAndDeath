@@ -6,26 +6,16 @@ use crate::packet_capnp::c_event;
 use crate::systime;
 
 #[derive(Clone, Debug)]
-pub struct ClientEvent {
-    pub disconnect: Option<bool>,
-    pub keepalive: Option<u64>,
-    pub step: Option<bool>,
-    pub open_inv: Option<bool>,
-    pub drop_itm: Option<String>,
-    pub inspect_itm: Option<String>,
-    pub attck: Option<bool>,
-    pub try_flee: Option<bool>,
-    pub error: Option<ErrorData>,
-}
-
-impl ClientEvent {
-    pub fn new(disconnect: Option<bool>, keepalive: Option<u64>,
-               step: Option<bool>, open_inv: Option<bool>, drop_itm: Option<String>, inspect_itm: Option<String>,
-               attck: Option<bool>, try_flee: Option<bool>, error: Option<ErrorData>) -> Self {
-        Self {
-            disconnect, keepalive, step, open_inv, drop_itm, inspect_itm, attck, try_flee, error
-        }
-    }
+pub enum ClientEvent {
+    Disconnect,
+    KeepAlive(u64),
+    Step,
+    OpenInv,
+    DropItem(String),
+    InspectItem(String),
+    Attack,
+    TryFlee,
+    Error(ErrorData),
 }
 
 pub fn write_client_disconnect(mut stream: &TcpStream) -> ::capnp::Result<()> {
@@ -37,7 +27,7 @@ pub fn write_client_disconnect(mut stream: &TcpStream) -> ::capnp::Result<()> {
     serialize::write_message(&mut stream, &message)
 }
 
-pub fn write_server_keepalive(mut stream: &TcpStream) -> ::capnp::Result<()> {
+pub fn write_client_keepalive(mut stream: &TcpStream) -> ::capnp::Result<()> {
     let mut message = Builder::new_default();
     {
         let mut er = message.init_root::<c_event::Builder>();
@@ -94,57 +84,39 @@ pub fn write_client_error(mut stream: &TcpStream, error: ErrorData) -> ::capnp::
 }
 
 pub fn read_client_event(mut stream: &TcpStream) -> ClientEvent {
-    let message_reader_result = serialize::read_message(&mut stream, ::capnp::message::ReaderOptions::new());
+    let message_reader_result =
+        serialize::read_message(&mut stream, ::capnp::message::ReaderOptions::new());
     if message_reader_result.is_err() {
-        return ClientEvent::new(None, None, None, None,
-                                None, None, None, None,
-                                Some(ErrorData { msg: format!("Failed to read packet from client!"), disconnect: true }));
+        return ClientEvent::Error(ErrorData { msg: format!("Failed to read packet from client!"), disconnect: true });
     }
     let message_reader = message_reader_result.unwrap();
 
     let er_raw = message_reader.get_root::<c_event::Reader>();
     if er_raw.is_err() {
-        return ClientEvent::new(None, None, None, None,
-                                None, None, None, None,
-                                Some(ErrorData { msg: format!("Failed to read packet from client!"), disconnect: true }));
+        return ClientEvent::Error(ErrorData { msg: format!("Failed to read packet from client!"), disconnect: true });
     }
     let er = er_raw.unwrap();
 
     let which = er.which();
 
     if let Err(err) = which {
-        return ClientEvent::new(None, None, None, None,
-                                None, None, None, None,
-                                Some(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true }));
+        return ClientEvent::Error(ErrorData { msg: format!("Read invalid Server Event packet! Error: {}", err), disconnect: true });
     }
 
     let w = which.unwrap();
 
     match w {
-        c_event::Disconnect(b) => ClientEvent::new(Some(b), None, None, None,
-                                                          None, None, None, None, None),
-        c_event::Keepalive(a) => ClientEvent::new(None, Some(a), None, None,
-                                                         None, None, None, None, None),
-        c_event::Step(_) => ClientEvent::new(None, None, Some(true), None,
-                                                    None, None, None, None, None),
-        c_event::OpenInv(_) => ClientEvent::new(None, None, None, Some(true),
-                                                None, None, None, None, None),
-        c_event::DropItm(name) => ClientEvent::new(None, None, None, None,
-                                                   Some(name.unwrap().to_string()), None, None, None, None),
-        c_event::InspectItm(name) => ClientEvent::new(None, None, None, None,
-                                                      None, Some(name.unwrap().to_string()), None, None, None),
-        c_event::Attack(_) => ClientEvent::new(None, None, None, None,
-                                               None, None, Some(true), None, None),
-        c_event::TryFlee(_) => ClientEvent::new(None, None, None, None,
-                                               None, None, None, Some(true), None),
+        c_event::Disconnect(_) => ClientEvent::Disconnect,
+        c_event::Keepalive(a) => ClientEvent::KeepAlive(a),
+        c_event::Step(_) => ClientEvent::Step,
+        c_event::OpenInv(_) => ClientEvent::OpenInv,
+        c_event::DropItm(name) => ClientEvent::DropItem(name.unwrap().to_string()),
+        c_event::InspectItm(name) => ClientEvent::InspectItem(name.unwrap().to_string()),
+        c_event::Attack(_) => ClientEvent::Attack,
+        c_event::TryFlee(_) => ClientEvent::TryFlee,
         c_event::Error(err_reader) => {
             let err = err_reader.unwrap();
-            ClientEvent::new(None, None, None, None,
-                             None, None, None, None,
-                             Some(ErrorData {
-                                        msg: err.get_error().unwrap().to_string(),
-                                        disconnect: err.get_disconnect()
-                }))
+            ClientEvent::Error(ErrorData { msg: err.get_error().unwrap().to_string(), disconnect: err.get_disconnect() })
         }
     }
 }

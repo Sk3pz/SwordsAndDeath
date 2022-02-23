@@ -2,6 +2,7 @@ use rand::{Rng, thread_rng};
 use rand_distr::{Normal, Distribution};
 use uuid::Uuid;
 use crate::database::ItemValueDB;
+use crate::network::item_data::ItemData;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ItemType {
@@ -148,4 +149,14 @@ impl Item {
         }
     }
 
+    pub fn as_data(&self) -> ItemData {
+        ItemData {
+            name: self.name.clone(),
+            level: self.level,
+            itype: self.item_type as u32,
+            rarity: self.rarity as u32,
+            damage: Some(self.damage),
+            defense: Some(self.defense)
+        }
+    }
 }

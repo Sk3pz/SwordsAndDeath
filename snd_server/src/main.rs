@@ -23,6 +23,9 @@ mod config;
 ***/
 
 pub const ACCEPTED_CLIENT_VERSION: &str = "0.1.0";
+pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const MOTD: &str = "Welcome to SnD! We are still in ALPHA, so expect some bugs!";
+pub const KEEPALIVE_INTERVAL: u64 = 20; // time in seconds to send the keepalive packet
 
 pub fn systime() -> Duration {
     SystemTime::now()
@@ -37,13 +40,12 @@ pub fn to_epoch(time: SystemTime) -> Duration {
 
 pub fn read_config_raw(file: &mut File) -> String {
     let mut config_content = String::new();
-    file.read_to_string(&mut config_content).expect("Failed to read config file. Please make sure that the server has permission to edit files.");
+    file.read_to_string(&mut config_content)
+        .expect("Failed to read config file. Please make sure that the server has permission to edit files.");
     config_content
 }
 
 fn main() {
-    // create MOTD
-    let motd = format!("Swords And Death Server v{} written by Eric Shreve", env!("CARGO_PKG_VERSION"));
 
     // handle configuration
     let cdir = std::env::current_dir().expect("Error in attempting to get config file: no access.");
