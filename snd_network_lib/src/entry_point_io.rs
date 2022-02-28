@@ -53,7 +53,6 @@ pub fn read_entry_point(mut stream: &TcpStream) -> (Option<LoginData>, Option<St
             (None, Some(ver.unwrap().to_string()), None)
         }
         Err(::capnp::NotInSchema(_)) => {
-            // todo(eric): error
             (None, None, Some(String::from("Invalid EntryPoint - no version or login data found!")))
         }
     }
