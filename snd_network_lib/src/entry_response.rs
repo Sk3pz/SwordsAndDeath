@@ -34,7 +34,7 @@ pub fn write_ping_entry_response(mut stream: &TcpStream, client_valid: bool, ver
     serialize::write_message(&mut stream, &message)
 }
 
-/// returns vmotd, version, error
+/// returns motd, version, error
 pub fn read_entry_response(mut stream: &TcpStream) -> (Option<String>, Option<String>, Option<String>) {
     let message_reader_result = serialize::read_message(&mut stream, ::capnp::message::ReaderOptions::new());
     if message_reader_result.is_err() {

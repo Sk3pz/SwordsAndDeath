@@ -1,6 +1,10 @@
+use std::io;
 use std::io::{stdin, stdout, Write};
 use std::net::TcpStream;
+use better_term::{Color, flush_styles};
 use regex::Regex;
+use snd_network_lib::entry_point_io::write_entry_point_ver;
+use snd_network_lib::entry_response::read_entry_response;
 
 fn read_input<S: Into<String>>(prompt: S) -> String {
     print!("{}", prompt.into());
@@ -14,6 +18,21 @@ fn read_input<S: Into<String>>(prompt: S) -> String {
         panic!("Error in reading input: {}", r.unwrap_err());
     }
     buffer.replace("\n", "").replace("\r", "")
+}
+
+pub fn prompt<S: Into<String>>(prompt: S) -> bool {
+    let p = prompt.into();
+    loop {
+        let input = read_input(format!("{} (Y or N): ", p));
+        match input.to_ascii_lowercase().as_str() {
+            "y" | "yes" => return true,
+            "n" | "no" => return false,
+            _ => {
+                println!("{}Warning: The input can only be Y or N!", Color::Yellow);
+                flush_styles();
+            }
+        }
+    }
 }
 
 fn get_ip() -> String {
@@ -40,6 +59,36 @@ fn get_ip() -> String {
     format!("{}:{}", ip, port)
 }
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
-    let mut stream = TcpStream::connect(get_ip());
+    let ip = get_ip();
+    loop {
+        // get the connection
+        let mut ping_stream = TcpStream::connect(ip.clone());
+        if ping_stream.is_err() {
+            eprintln!("Failed to connect to server.");
+            continue;
+        }
+
+        // validate the connection
+        let ps = ping_stream.unwrap();
+
+        // write version to server for ping
+        if let Err(e) = write_entry_point_ver(&ps, VERSION.to_string()) {
+            eprintln!("Failed to write ping to server to check version. Error: {}", e);
+            return;
+        }
+
+        // read response
+        let (motd, version, error) = read_entry_response(&ps);
+
+        // if it was an error, print the message and see if the user wants to continue or exit
+        if error.is_some() {
+            eprintln!("Error from the server: {}", error.unwrap());
+        }
+
+        drop(ps);
+        break;
+    }
 }
