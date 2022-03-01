@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{io, thread};
 use std::time::Duration;
 use better_term::{Color, Style};
-use log::{error, info, Level, warn};
+use log::{error, info, Level, LevelFilter, warn};
 use crate::client::handle_connection;
 use crate::config::read_config;
 use crate::database::Database;
@@ -25,10 +25,18 @@ mod config;
  *  - Password recovery?
 ***/
 
+// versions
 pub const ACCEPTED_CLIENT_VERSION: &str = "0.1.0";
 pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// info for the client
 pub const MOTD: &str = "Welcome to SnD! We are still in ALPHA, so expect some bugs!";
 pub const KEEPALIVE_INTERVAL: u64 = 20; // time in seconds to send the keepalive packet
+
+// How long the main loop should wait between checking for incoming connections to save cpu resources
+const MAIN_LOOP_WAIT_DELAY_MS: u64 = 20;
+const LOG_LEVEL_FILTER_AT: LevelFilter = LevelFilter::Trace;
+const LOG_TARGET: &str = "main";
 
 pub fn read_config_raw(file: &mut File) -> String {
     let mut config_content = String::new();
@@ -62,30 +70,32 @@ fn setup_logger() -> Result<(), fern::InitError> {
                 ic = Style::reset().fg(Color::White),
             ))
         })
-        .level(log::LevelFilter::Debug)
+        .level(LOG_LEVEL_FILTER_AT)
         .chain(std::io::stdout())
-        .chain(fern::log_file("output.log")?)
+        //.chain(fern::log_file("output.log")?)
         .apply()?;
     Ok(())
 }
 
 fn main() {
+    println!("{}", MOTD);
     // setup the logger using the fern crate
     if let Err(e) = setup_logger() {
         eprintln!("Failed to initialize the logging system: {}", e);
         return;
     }
 
+    info!(target:LOG_TARGET, "Reading configuration file...");
     // handle configuration
     let cdir_r = std::env::current_dir();
     if let Err(e) = cdir_r {
-        error!("Failed to create config file: no access! raw error: {}", e);
+        error!(target:LOG_TARGET, "Failed to create config file: no access! raw error: {}", e);
         return;
     }
     let cdir = cdir_r.unwrap();
     let current_dir_r = cdir.as_path().to_str();
     if current_dir_r.is_none() {
-        error!("Could not access the config file!");
+        error!(target:LOG_TARGET, "Could not access the config file!");
         return;
     }
     let current_dir = current_dir_r.unwrap();
@@ -115,21 +125,28 @@ fn main() {
         }
     }
 
+    info!(target:LOG_TARGET, "Read config with the listening IP {} and the port {}", ip.clone(), port.clone());
+    info!(target:LOG_TARGET, "Starting TCP Listener...");
+
+    let full_ip = format!("{}:{}", ip, port);
+
     // start listening for connections
-    let listener_result = TcpListener::bind(format!("{}:{}", ip, port));
+    let listener_result = TcpListener::bind(full_ip.clone());
     if listener_result.is_err() {
-        error!("Failed to bind listener to ip: {}", listener_result.unwrap_err());
+        error!(target:LOG_TARGET, "Failed to bind listener to ip: {}", listener_result.unwrap_err());
         return;
     }
     let listener = listener_result.unwrap();
     // set the listener to non-blocking mode to enable safely exiting the server
     if let Err(e) = listener.set_nonblocking(true) {
-        error!("Failed to set the connection listener to non-blocking mode; safely exiting would not be possible.\n  Error: {}", e);
+        error!(target:LOG_TARGET, "Failed to set the connection listener to non-blocking mode; safely exiting would not be possible.\n  Error: {}", e);
         return;
     }
 
     // create the database instance for the clients to use
-    let db = Arc::new(Mutex::new(Database::new("snd.sqlite")));
+    info!(target:LOG_TARGET, "Connecting to the database...");
+    let db = Arc::new(Mutex::new(Database::new("snd")));
+    info!(target:LOG_TARGET, "Connected to the database!");
 
     // create a flag for threads to access to let them know if the program is shutting down
     let terminate = Arc::new(AtomicBool::new(false));
@@ -140,12 +157,15 @@ fn main() {
         ctrlc_tarc.store(true, Ordering::SeqCst);
     });
     if let Err(e) = cc_handler {
-        error!("Failed to set exit handler; no safe way to exit: {}", e);
+        error!(target:LOG_TARGET, "Failed to set exit handler; no safe way to exit: {}", e);
         return;
     }
 
     // store the join handlers for closing later
     let mut handlers = Vec::new();
+
+    info!(target:LOG_TARGET, "Started listening at {}", full_ip);
+    info!(target:LOG_TARGET, "Accpting client version {}", ACCEPTED_CLIENT_VERSION);
 
     // listen for incoming connections
     for stream in listener.incoming() {
@@ -158,7 +178,6 @@ fn main() {
                 let tarc = Arc::clone(&terminate);
 
                 // spawn a new thread with the client handler
-                // todo(eric): better handle connections, maybe through a thread pool?
                 handlers.push(thread::spawn(move || {
                     handle_connection(s, db_arc, tarc);
                 }));
@@ -166,16 +185,16 @@ fn main() {
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 // handle if the program needs to exit
                 if terminate.load(Ordering::SeqCst) {
-                    info!("Safely shutting down server...");
+                    info!(target:LOG_TARGET, "Safely shutting down server...");
                     break;
                 }
 
                 // save CPU resources with a sleep call
-                thread::sleep(Duration::from_millis(20));
+                thread::sleep(Duration::from_millis(MAIN_LOOP_WAIT_DELAY_MS));
                 continue;
             }
             Err(e) => {
-                error!("Encountered an IO error when polling for connections: {}", e);
+                error!(target:LOG_TARGET, "Encountered an IO error when polling for connections: {}", e);
                 // safely exit
                 break;
             }
@@ -185,14 +204,17 @@ fn main() {
     // store that the program is terminating and the clients should be disconnected
     terminate.store(true, Ordering::SeqCst);
 
-    info!("Shutting down all active connections...");
+    info!(target:LOG_TARGET, "Shutting down all active connections...");
     // ensure all threads are closed before shutting down the server
     for h in handlers {
         if let Err(_) = h.join() {
-            warn!("A thread was unavailable when shutting down!")
+            // warn!(target:LOG_TARGET, "A thread was unavailable when shutting down!")
         }
     }
 
-    info!("Server shut down!");
+    // stop the listener
+    drop(listener);
+
+    info!(target:LOG_TARGET, "Server shut down!");
 
 }

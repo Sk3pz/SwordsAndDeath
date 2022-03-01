@@ -28,7 +28,7 @@ pub fn write_ping_entry_response(mut stream: &TcpStream, client_valid: bool, ver
         if client_valid {
             er.set_version(version.as_str());
         } else {
-            er.set_error(format!("Invalid version: {}", version).as_str());
+            er.set_error(format!("Invalid version! The server is only accepting client version {}", version).as_str());
         }
     }
     serialize::write_message(&mut stream, &message)

@@ -79,14 +79,12 @@ impl Database {
         }
     }
 
-    pub fn get_value<S: Into<String>>(&self, select: S, from: S, key: S, where_key_is: S) -> Option<String> {
+    pub fn get_value<S: Into<String>>(&self, select: S, table: S, key: S, key_value: S) -> Option<String> {
         let mut statement = self.connection
-            .prepare(format!("SELECT '{}' FROM '{}' WHERE '{}' IS '{}'",
-            select.into(), from.into(), key.into(), where_key_is.into()))
+            .prepare(format!("SELECT {} FROM {} WHERE {} IS '{}'",
+                             select.into(), table.into(), key.into(), key_value.into()))
             .expect("Failed to prepare statement for database interaction.");
-
         let state = statement.next();
-
         if state.is_err() {
             return None;
         }
