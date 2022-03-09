@@ -11,6 +11,12 @@ pub enum ItemType {
     Helmet, Chestplate, Leggings, Boots,
 }
 
+impl ItemType {
+    pub fn rand() -> Self {
+        Self::from(thread_rng().gen_range(0..=5))
+    }
+}
+
 impl Into<u32> for ItemType {
     fn into(self) -> u32 {
         match self {
@@ -103,9 +109,10 @@ pub struct Item {
 
 impl Item {
 
-    pub fn new_rand(item_type: ItemType, owner: Uuid, around_level: u32, rarity: ItemRarity) -> Self {
+    pub fn new_rand(item_type: ItemType, owner: &Uuid, around_level: u32, rarity: ItemRarity) -> Self {
+        let uuid = Uuid::new_v4();
         // generate a random item name (based on type and possibly level / rarity?)
-        let name = format!("TD:NG"); // todo(eric): Name Generator (NG)
+        let name = format!("NO_NAME{}", uuid.to_string()); // todo(eric): Name Generator (NG)
 
         // generate the item's level
         let normal = Normal::new(around_level as f32, 5.5)
@@ -130,8 +137,9 @@ impl Item {
         }
 
         Self {
-            uuid: Uuid::new_v4(),
-            owner, name, item_type, rarity, level, damage, defense,
+            uuid,
+            owner: owner.clone(),
+            name, item_type, rarity, level, damage, defense,
         }
     }
 

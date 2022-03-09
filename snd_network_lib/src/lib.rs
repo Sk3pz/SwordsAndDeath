@@ -11,6 +11,7 @@ pub mod loot_data;
 pub mod enemy_data;
 pub mod error_data;
 pub mod encounter_data;
+pub mod player_data;
 
 pub mod client_event;
 pub mod server_event;

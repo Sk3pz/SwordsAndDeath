@@ -876,6 +876,13 @@ pub mod enemy {
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
+    pub fn get_race(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
+    }
+    pub fn has_race(&self) -> bool {
+      !self.reader.get_pointer_field(1).is_null()
+    }
+    #[inline]
     pub fn get_level(self) -> u32 {
       self.reader.get_data_field::<u32>(0)
     }
@@ -949,6 +956,21 @@ pub mod enemy {
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
+    pub fn get_race(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_race(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(1).set_text(value);
+    }
+    #[inline]
+    pub fn init_race(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(1).init_text(size)
+    }
+    pub fn has_race(&self) -> bool {
+      !self.builder.get_pointer_field(1).is_null()
+    }
+    #[inline]
     pub fn get_level(self) -> u32 {
       self.builder.get_data_field::<u32>(0)
     }
@@ -976,7 +998,7 @@ pub mod enemy {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
     pub const TYPE_ID: u64 = 0x9a5f_a929_bed5_b944;
   }
 }
@@ -1261,7 +1283,7 @@ pub mod loot {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>> {
+    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
     pub fn has_items(&self) -> bool {
@@ -1322,15 +1344,15 @@ pub mod loot {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned>> {
+    pub fn get_items(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_items(&mut self, value: ::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
+    pub fn set_items(&mut self, value: ::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_items(self, size: u32) -> ::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned> {
+    pub fn init_items(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
     pub fn has_items(&self) -> bool {
@@ -1508,8 +1530,191 @@ pub mod error {
   }
 }
 
+pub mod player_data {
+  #[derive(Copy, Clone)]
+  pub struct Owned(());
+  impl <'a> ::capnp::traits::Owned<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+  impl <'a> ::capnp::traits::OwnedStruct<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+  impl ::capnp::traits::Pipelined for Owned { type Pipeline = Pipeline; }
+
+  #[derive(Clone, Copy)]
+  pub struct Reader<'a> { reader: ::capnp::private::layout::StructReader<'a> }
+
+  impl <'a,> ::capnp::traits::HasTypeId for Reader<'a,>  {
+    #[inline]
+    fn type_id() -> u64 { _private::TYPE_ID }
+  }
+  impl <'a,> ::capnp::traits::FromStructReader<'a> for Reader<'a,>  {
+    fn new(reader: ::capnp::private::layout::StructReader<'a>) -> Reader<'a,> {
+      Reader { reader,  }
+    }
+  }
+
+  impl <'a,> ::capnp::traits::FromPointerReader<'a> for Reader<'a,>  {
+    fn get_from_pointer(reader: &::capnp::private::layout::PointerReader<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Reader<'a,>> {
+      ::core::result::Result::Ok(::capnp::traits::FromStructReader::new(reader.get_struct(default)?))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::IntoInternalStructReader<'a> for Reader<'a,>  {
+    fn into_internal_struct_reader(self) -> ::capnp::private::layout::StructReader<'a> {
+      self.reader
+    }
+  }
+
+  impl <'a,> ::capnp::traits::Imbue<'a> for Reader<'a,>  {
+    fn imbue(&mut self, cap_table: &'a ::capnp::private::layout::CapTable) {
+      self.reader.imbue(::capnp::private::layout::CapTableReader::Plain(cap_table))
+    }
+  }
+
+  impl <'a,> Reader<'a,>  {
+    pub fn reborrow(&self) -> Reader<'_,> {
+      Reader { .. *self }
+    }
+
+    pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+      self.reader.total_size()
+    }
+    #[inline]
+    pub fn get_level(self) -> u32 {
+      self.reader.get_data_field::<u32>(0)
+    }
+    #[inline]
+    pub fn get_exp(self) -> u32 {
+      self.reader.get_data_field::<u32>(1)
+    }
+    #[inline]
+    pub fn get_region(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
+    }
+    pub fn has_region(&self) -> bool {
+      !self.reader.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn get_health(self) -> u32 {
+      self.reader.get_data_field::<u32>(2)
+    }
+    #[inline]
+    pub fn get_steps(self) -> u32 {
+      self.reader.get_data_field::<u32>(3)
+    }
+  }
+
+  pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
+  impl <'a,> ::capnp::traits::HasStructSize for Builder<'a,>  {
+    #[inline]
+    fn struct_size() -> ::capnp::private::layout::StructSize { _private::STRUCT_SIZE }
+  }
+  impl <'a,> ::capnp::traits::HasTypeId for Builder<'a,>  {
+    #[inline]
+    fn type_id() -> u64 { _private::TYPE_ID }
+  }
+  impl <'a,> ::capnp::traits::FromStructBuilder<'a> for Builder<'a,>  {
+    fn new(builder: ::capnp::private::layout::StructBuilder<'a>) -> Builder<'a, > {
+      Builder { builder,  }
+    }
+  }
+
+  impl <'a,> ::capnp::traits::ImbueMut<'a> for Builder<'a,>  {
+    fn imbue_mut(&mut self, cap_table: &'a mut ::capnp::private::layout::CapTable) {
+      self.builder.imbue(::capnp::private::layout::CapTableBuilder::Plain(cap_table))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::FromPointerBuilder<'a> for Builder<'a,>  {
+    fn init_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, _size: u32) -> Builder<'a,> {
+      ::capnp::traits::FromStructBuilder::new(builder.init_struct(_private::STRUCT_SIZE))
+    }
+    fn get_from_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Builder<'a,>> {
+      ::core::result::Result::Ok(::capnp::traits::FromStructBuilder::new(builder.get_struct(_private::STRUCT_SIZE, default)?))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::SetPointerBuilder for Reader<'a,>  {
+    fn set_pointer_builder<'b>(pointer: ::capnp::private::layout::PointerBuilder<'b>, value: Reader<'a,>, canonicalize: bool) -> ::capnp::Result<()> { pointer.set_struct(&value.reader, canonicalize) }
+  }
+
+  impl <'a,> Builder<'a,>  {
+    pub fn into_reader(self) -> Reader<'a,> {
+      ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+    }
+    pub fn reborrow(&mut self) -> Builder<'_,> {
+      Builder { .. *self }
+    }
+    pub fn reborrow_as_reader(&self) -> Reader<'_,> {
+      ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+    }
+
+    pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+      self.builder.into_reader().total_size()
+    }
+    #[inline]
+    pub fn get_level(self) -> u32 {
+      self.builder.get_data_field::<u32>(0)
+    }
+    #[inline]
+    pub fn set_level(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(0, value);
+    }
+    #[inline]
+    pub fn get_exp(self) -> u32 {
+      self.builder.get_data_field::<u32>(1)
+    }
+    #[inline]
+    pub fn set_exp(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(1, value);
+    }
+    #[inline]
+    pub fn get_region(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_region(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(0).set_text(value);
+    }
+    #[inline]
+    pub fn init_region(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(0).init_text(size)
+    }
+    pub fn has_region(&self) -> bool {
+      !self.builder.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn get_health(self) -> u32 {
+      self.builder.get_data_field::<u32>(2)
+    }
+    #[inline]
+    pub fn set_health(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(2, value);
+    }
+    #[inline]
+    pub fn get_steps(self) -> u32 {
+      self.builder.get_data_field::<u32>(3)
+    }
+    #[inline]
+    pub fn set_steps(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(3, value);
+    }
+  }
+
+  pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
+  impl ::capnp::capability::FromTypelessPipeline for Pipeline {
+    fn new(typeless: ::capnp::any_pointer::Pipeline) -> Pipeline {
+      Pipeline { _typeless: typeless,  }
+    }
+  }
+  impl Pipeline  {
+  }
+  mod _private {
+    use capnp::private::layout;
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 1 };
+    pub const TYPE_ID: u64 = 0x8a79_3e2e_8057_8a33;
+  }
+}
+
 pub mod s_event {
-  pub use self::Which::{Disconnect,Keepalive,GainExp,FindItem,Encounter,Inventory,ItemView,Error};
+  pub use self::Which::{Disconnect,Keepalive,Event,GainExp,FindItem,Encounter,Inventory,ItemView,Update,Error};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -1556,24 +1761,32 @@ pub mod s_event {
     pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
       self.reader.total_size()
     }
-    pub fn has_find_item(&self) -> bool {
-      if self.reader.get_data_field::<u16>(1) != 3 { return false; }
+    pub fn has_event(&self) -> bool {
+      if self.reader.get_data_field::<u16>(1) != 2 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
-    pub fn has_encounter(&self) -> bool {
+    pub fn has_find_item(&self) -> bool {
       if self.reader.get_data_field::<u16>(1) != 4 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
-    pub fn has_inventory(&self) -> bool {
+    pub fn has_encounter(&self) -> bool {
       if self.reader.get_data_field::<u16>(1) != 5 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
-    pub fn has_item_view(&self) -> bool {
+    pub fn has_inventory(&self) -> bool {
       if self.reader.get_data_field::<u16>(1) != 6 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
-    pub fn has_error(&self) -> bool {
+    pub fn has_item_view(&self) -> bool {
       if self.reader.get_data_field::<u16>(1) != 7 { return false; }
+      !self.reader.get_pointer_field(0).is_null()
+    }
+    pub fn has_update(&self) -> bool {
+      if self.reader.get_data_field::<u16>(1) != 8 { return false; }
+      !self.reader.get_pointer_field(0).is_null()
+    }
+    pub fn has_error(&self) -> bool {
+      if self.reader.get_data_field::<u16>(1) != 9 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
@@ -1590,31 +1803,41 @@ pub mod s_event {
           ))
         }
         2 => {
+          ::core::result::Result::Ok(Event(
+            ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
+          ))
+        }
+        3 => {
           ::core::result::Result::Ok(GainExp(
             self.reader.get_data_field::<u32>(2)
           ))
         }
-        3 => {
+        4 => {
           ::core::result::Result::Ok(FindItem(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        4 => {
+        5 => {
           ::core::result::Result::Ok(Encounter(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        5 => {
+        6 => {
           ::core::result::Result::Ok(Inventory(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        6 => {
+        7 => {
           ::core::result::Result::Ok(ItemView(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        7 => {
+        8 => {
+          ::core::result::Result::Ok(Update(
+            ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
+          ))
+        }
+        9 => {
           ::core::result::Result::Ok(Error(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
@@ -1683,78 +1906,106 @@ pub mod s_event {
       self.builder.set_data_field::<u64>(1, value);
     }
     #[inline]
-    pub fn set_gain_exp(&mut self, value: u32)  {
+    pub fn set_event(&mut self, value: ::capnp::text::Reader<'_>)  {
       self.builder.set_data_field::<u16>(1, 2);
+      self.builder.get_pointer_field(0).set_text(value);
+    }
+    #[inline]
+    pub fn init_event(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.set_data_field::<u16>(1, 2);
+      self.builder.get_pointer_field(0).init_text(size)
+    }
+    pub fn has_event(&self) -> bool {
+      if self.builder.get_data_field::<u16>(1) != 2 { return false; }
+      !self.builder.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn set_gain_exp(&mut self, value: u32)  {
+      self.builder.set_data_field::<u16>(1, 3);
       self.builder.set_data_field::<u32>(2, value);
     }
     #[inline]
     pub fn set_find_item(&mut self, value: crate::packet_capnp::item::Reader<'_>) -> ::capnp::Result<()> {
-      self.builder.set_data_field::<u16>(1, 3);
+      self.builder.set_data_field::<u16>(1, 4);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
     pub fn init_find_item(self, ) -> crate::packet_capnp::item::Builder<'a> {
-      self.builder.set_data_field::<u16>(1, 3);
+      self.builder.set_data_field::<u16>(1, 4);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
     pub fn has_find_item(&self) -> bool {
-      if self.builder.get_data_field::<u16>(1) != 3 { return false; }
-      !self.builder.get_pointer_field(0).is_null()
-    }
-    #[inline]
-    pub fn set_encounter(&mut self, value: crate::packet_capnp::encounter::Reader<'_>) -> ::capnp::Result<()> {
-      self.builder.set_data_field::<u16>(1, 4);
-      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
-    }
-    #[inline]
-    pub fn init_encounter(self, ) -> crate::packet_capnp::encounter::Builder<'a> {
-      self.builder.set_data_field::<u16>(1, 4);
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
-    }
-    pub fn has_encounter(&self) -> bool {
       if self.builder.get_data_field::<u16>(1) != 4 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn set_inventory(&mut self, value: ::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
+    pub fn set_encounter(&mut self, value: crate::packet_capnp::encounter::Reader<'_>) -> ::capnp::Result<()> {
       self.builder.set_data_field::<u16>(1, 5);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_inventory(self, size: u32) -> ::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned> {
+    pub fn init_encounter(self, ) -> crate::packet_capnp::encounter::Builder<'a> {
       self.builder.set_data_field::<u16>(1, 5);
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
-    pub fn has_inventory(&self) -> bool {
+    pub fn has_encounter(&self) -> bool {
       if self.builder.get_data_field::<u16>(1) != 5 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn set_item_view(&mut self, value: crate::packet_capnp::item::Reader<'_>) -> ::capnp::Result<()> {
+    pub fn set_inventory(&mut self, value: ::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>) -> ::capnp::Result<()> {
       self.builder.set_data_field::<u16>(1, 6);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_item_view(self, ) -> crate::packet_capnp::item::Builder<'a> {
+    pub fn init_inventory(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned> {
       self.builder.set_data_field::<u16>(1, 6);
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
-    pub fn has_item_view(&self) -> bool {
+    pub fn has_inventory(&self) -> bool {
       if self.builder.get_data_field::<u16>(1) != 6 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn set_error(&mut self, value: crate::packet_capnp::error::Reader<'_>) -> ::capnp::Result<()> {
+    pub fn set_item_view(&mut self, value: crate::packet_capnp::item::Reader<'_>) -> ::capnp::Result<()> {
       self.builder.set_data_field::<u16>(1, 7);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_error(self, ) -> crate::packet_capnp::error::Builder<'a> {
+    pub fn init_item_view(self, ) -> crate::packet_capnp::item::Builder<'a> {
       self.builder.set_data_field::<u16>(1, 7);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
-    pub fn has_error(&self) -> bool {
+    pub fn has_item_view(&self) -> bool {
       if self.builder.get_data_field::<u16>(1) != 7 { return false; }
+      !self.builder.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn set_update(&mut self, value: crate::packet_capnp::player_data::Reader<'_>) -> ::capnp::Result<()> {
+      self.builder.set_data_field::<u16>(1, 8);
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
+    }
+    #[inline]
+    pub fn init_update(self, ) -> crate::packet_capnp::player_data::Builder<'a> {
+      self.builder.set_data_field::<u16>(1, 8);
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
+    }
+    pub fn has_update(&self) -> bool {
+      if self.builder.get_data_field::<u16>(1) != 8 { return false; }
+      !self.builder.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn set_error(&mut self, value: crate::packet_capnp::error::Reader<'_>) -> ::capnp::Result<()> {
+      self.builder.set_data_field::<u16>(1, 9);
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
+    }
+    #[inline]
+    pub fn init_error(self, ) -> crate::packet_capnp::error::Builder<'a> {
+      self.builder.set_data_field::<u16>(1, 9);
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
+    }
+    pub fn has_error(&self) -> bool {
+      if self.builder.get_data_field::<u16>(1) != 9 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
@@ -1771,31 +2022,41 @@ pub mod s_event {
           ))
         }
         2 => {
+          ::core::result::Result::Ok(Event(
+            ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
+          ))
+        }
+        3 => {
           ::core::result::Result::Ok(GainExp(
             self.builder.get_data_field::<u32>(2)
           ))
         }
-        3 => {
+        4 => {
           ::core::result::Result::Ok(FindItem(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        4 => {
+        5 => {
           ::core::result::Result::Ok(Encounter(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        5 => {
+        6 => {
           ::core::result::Result::Ok(Inventory(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        6 => {
+        7 => {
           ::core::result::Result::Ok(ItemView(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        7 => {
+        8 => {
+          ::core::result::Result::Ok(Update(
+            ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
+          ))
+        }
+        9 => {
           ::core::result::Result::Ok(Error(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
@@ -1818,22 +2079,24 @@ pub mod s_event {
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 1 };
     pub const TYPE_ID: u64 = 0xa3a2_6618_dd4d_a69f;
   }
-  pub enum Which<A0,A1,A2,A3,A4> {
+  pub enum Which<A0,A1,A2,A3,A4,A5,A6> {
     Disconnect(bool),
     Keepalive(u64),
+    Event(A0),
     GainExp(u32),
-    FindItem(A0),
-    Encounter(A1),
-    Inventory(A2),
-    ItemView(A3),
-    Error(A4),
+    FindItem(A1),
+    Encounter(A2),
+    Inventory(A3),
+    ItemView(A4),
+    Update(A5),
+    Error(A6),
   }
-  pub type WhichReader<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::encounter::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a, crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::error::Reader<'a>>>;
-  pub type WhichBuilder<'a,> = Which<::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::encounter::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a, crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::error::Builder<'a>>>;
+  pub type WhichReader<'a,> = Which<::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::encounter::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Reader<'a>>,::capnp::Result<crate::packet_capnp::player_data::Reader<'a>>,::capnp::Result<crate::packet_capnp::error::Reader<'a>>>;
+  pub type WhichBuilder<'a,> = Which<::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::encounter::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::packet_capnp::item::Owned>>,::capnp::Result<crate::packet_capnp::item::Builder<'a>>,::capnp::Result<crate::packet_capnp::player_data::Builder<'a>>,::capnp::Result<crate::packet_capnp::error::Builder<'a>>>;
 }
 
 pub mod c_event {
-  pub use self::Which::{Disconnect,Keepalive,Step,OpenInv,DropItm,InspectItm,Attack,TryFlee,Error};
+  pub use self::Which::{Disconnect,Keepalive,Step,RqstUpdate,OpenInv,DropItm,InspectItm,Attack,TryFlee,Error};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -1881,15 +2144,15 @@ pub mod c_event {
       self.reader.total_size()
     }
     pub fn has_drop_itm(&self) -> bool {
-      if self.reader.get_data_field::<u16>(1) != 4 { return false; }
-      !self.reader.get_pointer_field(0).is_null()
-    }
-    pub fn has_inspect_itm(&self) -> bool {
       if self.reader.get_data_field::<u16>(1) != 5 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
+    pub fn has_inspect_itm(&self) -> bool {
+      if self.reader.get_data_field::<u16>(1) != 6 { return false; }
+      !self.reader.get_pointer_field(0).is_null()
+    }
     pub fn has_error(&self) -> bool {
-      if self.reader.get_data_field::<u16>(1) != 8 { return false; }
+      if self.reader.get_data_field::<u16>(1) != 9 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
@@ -1911,31 +2174,36 @@ pub mod c_event {
           ))
         }
         3 => {
+          ::core::result::Result::Ok(RqstUpdate(
+            ()
+          ))
+        }
+        4 => {
           ::core::result::Result::Ok(OpenInv(
             self.reader.get_bool_field(0)
           ))
         }
-        4 => {
+        5 => {
           ::core::result::Result::Ok(DropItm(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        5 => {
+        6 => {
           ::core::result::Result::Ok(InspectItm(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        6 => {
+        7 => {
           ::core::result::Result::Ok(Attack(
             self.reader.get_bool_field(0)
           ))
         }
-        7 => {
+        8 => {
           ::core::result::Result::Ok(TryFlee(
             self.reader.get_bool_field(0)
           ))
         }
-        8 => {
+        9 => {
           ::core::result::Result::Ok(Error(
             ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
           ))
@@ -2009,60 +2277,64 @@ pub mod c_event {
       self.builder.set_bool_field(0, value);
     }
     #[inline]
-    pub fn set_open_inv(&mut self, value: bool)  {
+    pub fn set_rqst_update(&mut self, _value: ())  {
       self.builder.set_data_field::<u16>(1, 3);
+    }
+    #[inline]
+    pub fn set_open_inv(&mut self, value: bool)  {
+      self.builder.set_data_field::<u16>(1, 4);
       self.builder.set_bool_field(0, value);
     }
     #[inline]
     pub fn set_drop_itm(&mut self, value: ::capnp::text::Reader<'_>)  {
-      self.builder.set_data_field::<u16>(1, 4);
+      self.builder.set_data_field::<u16>(1, 5);
       self.builder.get_pointer_field(0).set_text(value);
     }
     #[inline]
     pub fn init_drop_itm(self, size: u32) -> ::capnp::text::Builder<'a> {
-      self.builder.set_data_field::<u16>(1, 4);
+      self.builder.set_data_field::<u16>(1, 5);
       self.builder.get_pointer_field(0).init_text(size)
     }
     pub fn has_drop_itm(&self) -> bool {
-      if self.builder.get_data_field::<u16>(1) != 4 { return false; }
-      !self.builder.get_pointer_field(0).is_null()
-    }
-    #[inline]
-    pub fn set_inspect_itm(&mut self, value: ::capnp::text::Reader<'_>)  {
-      self.builder.set_data_field::<u16>(1, 5);
-      self.builder.get_pointer_field(0).set_text(value);
-    }
-    #[inline]
-    pub fn init_inspect_itm(self, size: u32) -> ::capnp::text::Builder<'a> {
-      self.builder.set_data_field::<u16>(1, 5);
-      self.builder.get_pointer_field(0).init_text(size)
-    }
-    pub fn has_inspect_itm(&self) -> bool {
       if self.builder.get_data_field::<u16>(1) != 5 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn set_attack(&mut self, value: bool)  {
+    pub fn set_inspect_itm(&mut self, value: ::capnp::text::Reader<'_>)  {
       self.builder.set_data_field::<u16>(1, 6);
-      self.builder.set_bool_field(0, value);
+      self.builder.get_pointer_field(0).set_text(value);
     }
     #[inline]
-    pub fn set_try_flee(&mut self, value: bool)  {
+    pub fn init_inspect_itm(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.set_data_field::<u16>(1, 6);
+      self.builder.get_pointer_field(0).init_text(size)
+    }
+    pub fn has_inspect_itm(&self) -> bool {
+      if self.builder.get_data_field::<u16>(1) != 6 { return false; }
+      !self.builder.get_pointer_field(0).is_null()
+    }
+    #[inline]
+    pub fn set_attack(&mut self, value: bool)  {
       self.builder.set_data_field::<u16>(1, 7);
       self.builder.set_bool_field(0, value);
     }
     #[inline]
-    pub fn set_error(&mut self, value: crate::packet_capnp::error::Reader<'_>) -> ::capnp::Result<()> {
+    pub fn set_try_flee(&mut self, value: bool)  {
       self.builder.set_data_field::<u16>(1, 8);
+      self.builder.set_bool_field(0, value);
+    }
+    #[inline]
+    pub fn set_error(&mut self, value: crate::packet_capnp::error::Reader<'_>) -> ::capnp::Result<()> {
+      self.builder.set_data_field::<u16>(1, 9);
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
     pub fn init_error(self, ) -> crate::packet_capnp::error::Builder<'a> {
-      self.builder.set_data_field::<u16>(1, 8);
+      self.builder.set_data_field::<u16>(1, 9);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
     pub fn has_error(&self) -> bool {
-      if self.builder.get_data_field::<u16>(1) != 8 { return false; }
+      if self.builder.get_data_field::<u16>(1) != 9 { return false; }
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
@@ -2084,31 +2356,36 @@ pub mod c_event {
           ))
         }
         3 => {
+          ::core::result::Result::Ok(RqstUpdate(
+            ()
+          ))
+        }
+        4 => {
           ::core::result::Result::Ok(OpenInv(
             self.builder.get_bool_field(0)
           ))
         }
-        4 => {
+        5 => {
           ::core::result::Result::Ok(DropItm(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        5 => {
+        6 => {
           ::core::result::Result::Ok(InspectItm(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
         }
-        6 => {
+        7 => {
           ::core::result::Result::Ok(Attack(
             self.builder.get_bool_field(0)
           ))
         }
-        7 => {
+        8 => {
           ::core::result::Result::Ok(TryFlee(
             self.builder.get_bool_field(0)
           ))
         }
-        8 => {
+        9 => {
           ::core::result::Result::Ok(Error(
             ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
           ))
@@ -2135,6 +2412,7 @@ pub mod c_event {
     Disconnect(bool),
     Keepalive(u64),
     Step(bool),
+    RqstUpdate(()),
     OpenInv(bool),
     DropItm(A0),
     InspectItm(A1),

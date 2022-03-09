@@ -1,3 +1,5 @@
+#![feature(thread_is_running)]
+
 use std::fs::File;
 use std::io::Read;
 use std::net::TcpListener;
@@ -7,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{io, thread};
 use std::time::Duration;
 use better_term::{Color, Style};
-use log::{error, info, Level, LevelFilter, warn};
+use log::{error, info, Level, LevelFilter};
 use crate::client::handle_connection;
 use crate::config::read_config;
 use crate::database::Database;
@@ -162,6 +164,7 @@ fn main() {
     }
 
     // store the join handlers for closing later
+    // todo(eric): I dont think this drops handlers that are no longer active
     let mut handlers = Vec::new();
 
     info!(target:LOG_TARGET, "Started listening at {}", full_ip);
@@ -188,6 +191,9 @@ fn main() {
                     info!(target:LOG_TARGET, "Safely shutting down server...");
                     break;
                 }
+
+                // handle handlers no longer in use
+                handlers.retain(|h| { h.is_running() });
 
                 // save CPU resources with a sleep call
                 thread::sleep(Duration::from_millis(MAIN_LOOP_WAIT_DELAY_MS));

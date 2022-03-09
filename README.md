@@ -6,3 +6,9 @@ other clients. One example of this is the discord bot in development that will a
 server with their friends.\
 If you don't like the current look and feel of the client, you can fork it and customize it to your liking, or code one
 from scratch using the documentation on our website!
+
+
+# TODO:
+ - Database not changing exp when steps are taken
+ - Ability for player to view stats about themselves
+   - Might need another packet for this

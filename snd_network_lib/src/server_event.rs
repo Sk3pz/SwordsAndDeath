@@ -8,14 +8,17 @@ use crate::{packet_capnp, systime};
 use crate::encounter_data::EncounterData;
 use crate::loot_data::LootData;
 use crate::packet_capnp::{encounter, s_event};
+use crate::player_data::PlayerData;
 
 #[derive(Clone, Debug)]
 pub enum ServerEvent {
     Disconnect,
     Keepalive(u64),
+    Event(String),
     GainExp(u32),
     FindItem(ItemData),
     Encounter(EncounterData),
+    Update(PlayerData),
     Inventory(Vec<ItemData>),
     ItemView(ItemData),
     Error(ErrorData),
@@ -35,6 +38,25 @@ pub fn write_server_keepalive(mut stream: &TcpStream) -> ::capnp::Result<()> {
     {
         let mut er = message.init_root::<s_event::Builder>();
         er.set_keepalive(systime().as_secs());
+    }
+    serialize::write_message(&mut stream, &message)
+}
+
+pub fn write_server_event<S: Into<String>>(mut stream: &TcpStream, msg: S) -> ::capnp::Result<()> {
+    let string = msg.into();
+    let mut message = Builder::new_default();
+    {
+        let mut er = message.init_root::<s_event::Builder>();
+        er.set_event(string.as_str());
+    }
+    serialize::write_message(&mut stream, &message)
+}
+
+pub fn write_server_gain_exp(mut stream: &TcpStream, amt: u32) -> ::capnp::Result<()> {
+    let mut message = Builder::new_default();
+    {
+        let mut er = message.init_root::<s_event::Builder>();
+        er.set_gain_exp(amt);
     }
     serialize::write_message(&mut stream, &message)
 }
@@ -64,6 +86,7 @@ pub fn write_server_encounter_attack(mut stream: &TcpStream, enemy: EnemyData, d
 
         let mut enemy_builder = encounter_builder.init_enemy();
         enemy_builder.set_name(enemy.name.as_str());
+        enemy_builder.set_race(enemy.race.as_str());
         enemy_builder.set_health(enemy.health);
         enemy_builder.set_level(enemy.level);
     }
@@ -80,6 +103,7 @@ pub fn write_server_encounter_flee(mut stream: &TcpStream, enemy: EnemyData, suc
 
         let mut enemy_builder = encounter_builder.init_enemy();
         enemy_builder.set_name(enemy.name.as_str());
+        enemy_builder.set_race(enemy.race.as_str());
         enemy_builder.set_health(enemy.health);
         enemy_builder.set_level(enemy.level);
     }
@@ -96,6 +120,7 @@ pub fn write_server_encounter_lost(mut stream: &TcpStream, enemy: EnemyData) -> 
 
         let mut enemy_builder = encounter_builder.init_enemy();
         enemy_builder.set_name(enemy.name.as_str());
+        enemy_builder.set_race(enemy.race.as_str());
         enemy_builder.set_health(enemy.health);
         enemy_builder.set_level(enemy.level);
     }
@@ -126,6 +151,7 @@ pub fn write_server_encounter_win(mut stream: &TcpStream, enemy: EnemyData, loot
 
         let mut enemy_builder = encounter_builder.reborrow().init_enemy();
         enemy_builder.set_name(enemy.name.as_str());
+        enemy_builder.set_race(enemy.race.as_str());
         enemy_builder.set_health(enemy.health);
         enemy_builder.set_level(enemy.level);
     }
@@ -147,6 +173,20 @@ pub fn write_server_inventory(mut stream: &TcpStream, inventory: Vec<ItemData>) 
             inv_builder.reborrow().get(index).set_damage(item_data.damage.unwrap_or(0));
             inv_builder.reborrow().get(index).set_defense(item_data.defense.unwrap_or(0));
         }
+    }
+    serialize::write_message(&mut stream, &message)
+}
+
+pub fn write_server_update(mut stream: &TcpStream, data: PlayerData) -> ::capnp::Result<()> {
+    let mut message = Builder::new_default();
+    {
+        let mut er = message.init_root::<s_event::Builder>();
+        let mut pd = er.init_update();
+        pd.set_level(data.level);
+        pd.set_exp(data.exp);
+        pd.set_region(data.region.as_str());
+        pd.set_steps(data.steps);
+        pd.set_health(data.health);
     }
     serialize::write_message(&mut stream, &message)
 }
@@ -200,7 +240,18 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
     match which.unwrap() {
         s_event::Disconnect(_) => ServerEvent::Disconnect,
         s_event::Keepalive(v) => ServerEvent::Keepalive(v),
+        s_event::Event(s) => ServerEvent::Event(s.unwrap().to_string()),
         s_event::GainExp(v) => ServerEvent::GainExp(v),
+        s_event::Update(pd) => {
+            let raw_pdata = pd.unwrap();
+            ServerEvent::Update(PlayerData {
+                level: raw_pdata.get_level(),
+                exp: raw_pdata.get_exp(),
+                health: raw_pdata.get_health(),
+                steps: raw_pdata.get_steps(),
+                region: raw_pdata.get_region().unwrap().to_string()
+            })
+        }
         s_event::FindItem(id_reader) => {
             let raw_id = id_reader.unwrap();
             let id_r_which = raw_id.which();
@@ -233,6 +284,7 @@ pub fn read_server_event(mut stream: &TcpStream) -> ServerEvent {
             let enemy = emy.get_enemy().unwrap();
             let emydata = EnemyData {
                 name: enemy.get_name().unwrap().to_string(),
+                race: enemy.get_race().unwrap().to_string(),
                 level: enemy.get_level(),
                 health: enemy.get_health(),
             };

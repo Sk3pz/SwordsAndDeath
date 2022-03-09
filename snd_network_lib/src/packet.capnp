@@ -34,8 +34,8 @@ struct EntryResponse @0xef44d5bcb133a45f {
 
 # D    | For storing information about an item
 struct Item @0x95863d8c2442143d {
-    name   @0 :Text;   # the name of the item
-    level  @1 :UInt32; # the level of the item
+    name   @0 :Text;     # the name of the item
+    level  @1 :UInt32;   # the level of the item
     itype  @2 :UInt32;   # the item's type
     rarity @3 :UInt32;   # the rarity of the item
     # the item will either have a damage stat or a defense stat
@@ -48,8 +48,9 @@ struct Item @0x95863d8c2442143d {
 # D    | For sending display information about an enemy in an encounter
 struct Enemy @0x9a5fa929bed5b944 {
     name   @0 :Text;   # the enemy's display name
-    level  @1 :UInt32; # the enemy's level
-    health @2 :UInt32; # the enemy's health
+    race   @1 :Text;   # the enemy's race
+    level  @2 :UInt32; # the enemy's level
+    health @3 :UInt32; # the enemy's health
 }
 
 # D    | For storing information about an encounter
@@ -75,18 +76,29 @@ struct Error @0xb7c0dd88336ed014 {
     disconnect @1 :Bool; # If the client should be disconnected because of this error
 }
 
+# D    | For sending information about the player
+struct PlayerData @0x8a793e2e80578a33 {
+    level  @0 :UInt32; # The player's level
+    exp    @1 :UInt32; # The player's exp
+    region @2 :Text;   # The region the player is in
+    health @3 :UInt32; # The player's current health
+    steps  @4 :UInt32; # The total amount of steps of the player
+}
+
 # S->C | For an event from the server to the client
 # Usually run after a step
 struct SEvent @0xa3a26618dd4da69f {
     union {
         disconnect @0 :Bool; # if the server is telling the client to disconnect
         keepalive  @1 :UInt64;     # for handling the keepalive system
-        gainExp    @2 :UInt32;     # player gains experience
-        findItem   @3 :Item;       # player finds an item
-        encounter  @4 :Encounter;  # player encounters an enemy
-        inventory  @5 :List(Item); # player requested to view inventory
-        itemView   @6 :Item;       # player views an item in the inventory
-        error      @7 :Error;      # an error if one occurred
+        event      @2 :Text;       # info for the client to print out
+        gainExp    @3 :UInt32;     # player gains experience
+        findItem   @4 :Item;       # player finds an item
+        encounter  @5 :Encounter;  # player encounters an enemy
+        inventory  @6 :List(Item); # player requested to view inventory
+        itemView   @7 :Item;       # player views an item in the inventory
+        update     @8 :PlayerData; # Information about the player
+        error      @9 :Error;      # an error if one occurred
     }
 }
 
@@ -97,11 +109,12 @@ struct CEvent @0xd96b16669441a8da {
         disconnect @0 :Bool;   # if the client needs to disconnect or not
         keepalive  @1 :UInt64; # for handling the keepalive system
         step       @2 :Bool;   # player takes a step
-        openInv    @3 :Bool;   # player opens inventory
-        dropItm    @4 :Text;   # name of an item to drop in the inventory
-        inspectItm @5 :Text;   # name of an item to inspect in inventory
-        attack     @6 :Bool;   # player tries to attack
-        tryFlee    @7 :Bool;   # player tries to flee
-        error      @8 :Error;  # if an error has occurred
+        rqstUpdate @3 :Void;   # request update
+        openInv    @4 :Bool;   # player opens inventory
+        dropItm    @5 :Text;   # name of an item to drop in the inventory
+        inspectItm @6 :Text;   # name of an item to inspect in inventory
+        attack     @7 :Bool;   # player tries to attack
+        tryFlee    @8 :Bool;   # player tries to flee
+        error      @9 :Error;  # if an error has occurred
     }
 }

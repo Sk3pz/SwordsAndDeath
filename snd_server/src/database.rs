@@ -1,5 +1,6 @@
 use std::process::exit;
 use std::str::FromStr;
+use log::{error, info};
 use sqlite::{Connection, State};
 use uuid::Uuid;
 use crate::item::{Item, ItemRarity, ItemType};
@@ -20,7 +21,7 @@ pub enum PlayerValueDB {
 impl ToString for PlayerValueDB {
     fn to_string(&self) -> String {
         match self {
-            Self::UUID => "owner",
+            Self::UUID => "uuid",
             Self::Username => "username",
             Self::Password => "password",
             Self::Level => "level",
@@ -99,10 +100,10 @@ impl Database {
     }
 
     pub fn set_value<S: Into<String>>(&self, update: S, set: S, value: S, key: S, where_key_is: S) -> bool {
-        let r = self.connection.execute(format!("\
-        UPDATE {}\
-        SET {}='{}',\
-        WHERE {}='{}'", update.into(), set.into(), value.into(), key.into(), where_key_is.into()));
+        let r = self.connection.execute(
+            format!("UPDATE {} SET {}='{}' WHERE {}='{}'",
+                    update.into(), set.into(), value.into(),
+                    key.into(), where_key_is.into()));
 
         r.is_ok()
     }
@@ -119,6 +120,11 @@ impl Database {
 
     pub fn get_player_value(&self, uuid: &Uuid, val: PlayerValueDB) -> Option<String> {
         self.get_value(val.to_string(), format!("players"), format!("uuid"), uuid.to_string())
+    }
+
+    pub fn set_player_value(&self, uuid: &Uuid, key: PlayerValueDB, val: String) -> bool {
+        self.set_value("players", key.to_string().as_str(),
+                       val.as_str(), "uuid", uuid.to_string().as_str())
     }
 
     pub fn uuid_from_username(&self, username: String) -> Option<Uuid> {
@@ -220,30 +226,205 @@ impl Database {
     }
 
     pub fn set_player_active(&self, uuid: &Uuid) -> bool {
-        self.set_value("players", "active", "1", "uuid", uuid.to_string().as_str())
+        self.set_player_value(uuid, PlayerValueDB::Active, "1".to_string())
     }
 
     pub fn set_player_inactive(&self, uuid: &Uuid) -> bool {
-        self.set_value("players", "active", "0", "uuid", uuid.to_string().as_str())
+        self.set_player_value(uuid, PlayerValueDB::Active, "0".to_string())
+    }
+
+    pub fn get_player_steps(&self, uuid: &Uuid) -> Option<u32> {
+        let val = self.get_player_value(uuid, PlayerValueDB::Steps);
+        if val.is_some() {
+            return val.unwrap().parse::<u32>().ok();
+        }
+        None
+    }
+
+    pub fn inc_player_steps(&self, uuid: &Uuid) -> bool {
+        let current = self.get_player_steps(uuid);
+        if current.is_none() {
+            return false;
+        }
+        self.set_player_value(uuid, PlayerValueDB::Steps, (current.unwrap() + 1).to_string())
     }
 
     pub fn is_player_active(&self, uuid: &Uuid) -> bool {
         self.get_player_value(uuid, PlayerValueDB::Active).unwrap_or("0".to_string()) == "1"
     }
 
+    pub fn get_player_exp(&self, uuid: &Uuid) -> Option<u32> {
+        let raw = self.get_player_value(uuid, PlayerValueDB::Exp);
+        if let Some(r) = raw {
+            return r.parse::<u32>().ok();
+        }
+        None
+    }
+
+    pub fn add_player_exp(&self, uuid: &Uuid, amt: u32) -> bool {
+        let current = self.get_player_exp(uuid);
+        if current.is_none() { return false; }
+        self.set_player_value(uuid, PlayerValueDB::Exp, (current.unwrap() + amt).to_string())
+    }
+
+    pub fn set_player_exp(&self, uuid: &Uuid, amt: u32) -> bool {
+        let current = self.get_player_exp(uuid);
+        if current.is_none() { return false; }
+        self.set_player_value(uuid, PlayerValueDB::Exp, amt.to_string())
+    }
+
+    pub fn get_player_level(&self, uuid: &Uuid) -> Option<u32> {
+        let raw = self.get_player_value(uuid, PlayerValueDB::Level);
+        if let Some(r) = raw {
+            return r.parse::<u32>().ok();
+        }
+        None
+    }
+
+    pub fn inc_player_level(&self, uuid: &Uuid) -> bool {
+        self.inc_player_level_by(uuid, 1)
+    }
+
+    pub fn inc_player_level_by(&self, uuid: &Uuid, amt: u32) -> bool {
+        let current = self.get_player_level(uuid);
+        if current.is_none() { return false; }
+        self.set_player_value(uuid, PlayerValueDB::Level, (current.unwrap() + amt).to_string())
+    }
+
+    pub fn check_levelup(&self, uuid: &Uuid) -> bool {
+        // get the player's level
+        let player_level_query = self.get_player_level(&uuid);
+        if player_level_query.is_none() {
+            return false;
+        }
+        let player_level = player_level_query.unwrap();
+        // get the player's current exp
+        let player_exp_query = self.get_player_exp(&uuid);
+        if player_exp_query.is_none() {
+            return false;
+        }
+        let mut player_exp = player_exp_query.unwrap();
+        // the required amount of exp to level up
+        let mut required_exp = (player_level * 50) / 2;
+
+        // how many levels to add
+        let mut added_levels = 0;
+        // while the player has enough exp to level up
+        while player_exp >= required_exp {
+            // get the remaining exp of the levelup
+            let remainder = player_exp - required_exp;
+            // set the exp value to the remainder
+            player_exp = remainder;
+            // increment the level to set to
+            added_levels += 1;
+            // set the new required exp for the next level
+            required_exp = ((player_level + added_levels) * 50) / 2;
+        }
+        // write the new values of exp and levels
+        self.set_player_exp(&uuid, player_exp);
+        self.inc_player_level_by(&uuid, added_levels);
+
+        true
+    }
+
+    pub fn get_player_health(&self, uuid: &Uuid) -> Option<u32> {
+        let raw = self.get_player_value(uuid, PlayerValueDB::Health);
+        if let Some(r) = raw {
+            return r.parse::<u32>().ok();
+        }
+        None
+    }
+
+    pub fn add_player_health(&self, uuid: &Uuid, amt: u32) -> bool {
+        let current = self.get_player_health(uuid);
+        if current.is_none() { return false; }
+        self.set_player_value(uuid, PlayerValueDB::Health, (current.unwrap() + amt).to_string())
+    }
+
+    pub fn remove_player_health(&self, uuid: &Uuid, amt: u32) -> bool {
+        let current = self.get_player_health(uuid);
+        if current.is_none() { return false; }
+        self.set_player_value(uuid, PlayerValueDB::Health, (current.unwrap() - amt).to_string())
+    }
+
+    pub fn get_player_region(&self, uuid: &Uuid) -> Option<String> {
+        self.get_player_value(uuid, PlayerValueDB::CurrentRegion)
+    }
+
+    pub fn set_player_region(&self, uuid: &Uuid, region: String) -> bool {
+        self.set_player_value(uuid, PlayerValueDB::CurrentRegion, region)
+    }
+
     pub fn new_item(&self, item: &Item) -> bool {
         let r = self.connection.execute(
             format!("INSERT INTO items VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')",
-                    item.owner.to_string(), item.item_type as u32, item.level, item.damage, item.defense, "NONE", item.name, item.uuid, item.rarity as u32));
+                    item.owner.to_string(), item.item_type as u32, item.level, item.damage,
+                    item.defense, "NONE", item.name, item.uuid, item.rarity as u32));
 
         r.is_ok()
     }
 
-    pub fn item_uuid_from_name(&self, name: String) -> Option<Uuid> {
-        let v = self.get_value("uuid", "items", "name", name.as_str());
-        return if let Some(s) = v {
-            Some(Uuid::from_str(s.as_str()).expect(format!("Invalid UUID in database at item name {}", name).as_str()))
-        } else { None }
+    pub fn item_uuid_from_name(&self, name: String, owner: &Uuid) -> Option<Uuid> {
+        let mut statement = self.connection
+            .prepare(format!("SELECT uuid FROM items WHERE name IS '{}' AND owner IS '{}'", name, owner.to_string()))
+            .expect("Failed to prepare statement for database interaction.");
+        let state = statement.next();
+        if state.is_err() {
+            return None;
+        }
+
+        if state.unwrap() == State::Row {
+            if let Ok(val) = statement.read::<String>(0) {
+                return Uuid::from_str(val.as_str()).ok();
+            }
+        }
+
+        None
+    }
+
+    pub fn get_item_value(&self, uuid: &Uuid, val: ItemValueDB) -> Option<String> {
+        self.get_value(val.to_string(), "items".to_string(), "uuid".to_string(), uuid.to_string())
+    }
+
+    pub fn get_item_owner(&self, uuid: &Uuid) -> Option<Uuid> {
+        let owner = self.get_value("owner", "items", "uuid", uuid.to_string().as_str());
+        if let Some(s) = owner {
+            return Uuid::from_str(s.as_str()).ok();
+        }
+        None
+    }
+
+    pub fn get_item(&self, uuid: &Uuid) -> Option<Item> {
+        let owner_op = self.get_item_owner(uuid);
+        if owner_op.is_none() {
+            return None;
+        }
+        let name = self.get_item_value(uuid, ItemValueDB::Name).unwrap();
+        let itype_raw = self.get_item_value(uuid, ItemValueDB::Type).unwrap();
+        let itype = itype_raw.parse::<u32>().expect("failed to parse u32 from database!");
+        let level_raw = self.get_item_value(uuid, ItemValueDB::Level).unwrap();
+        let level = level_raw.parse::<u32>().expect("failed to parse u32 from database!");
+        let rarity_raw = self.get_item_value(uuid, ItemValueDB::Rarity).unwrap();
+        let rarity = rarity_raw.parse::<u32>().expect("failed to parse u32 from database!");
+        let defense_raw = self.get_item_value(uuid, ItemValueDB::Defense).unwrap();
+        let defense = defense_raw.parse::<u32>().expect("failed to parse u32 from database!");
+        let damage_raw = self.get_item_value(uuid, ItemValueDB::Damage).unwrap();
+        let damage = damage_raw.parse::<u32>().expect("failed to parse u32 from database!");
+
+        Some(Item {
+            uuid: uuid.clone(),
+            owner: owner_op.unwrap(),
+            name, item_type: ItemType::from(itype), level,
+            rarity: ItemRarity::from(rarity),
+            defense, damage
+        })
+    }
+
+    pub fn drop_item(&self, item: &Item) -> bool {
+        let r = self.connection.execute(format!("\
+        DELETE FROM items WHERE uuid IS '{}'", item.uuid));
+
+        r.is_ok()
     }
 
     pub fn update_item(&self, item: &Item) -> bool {

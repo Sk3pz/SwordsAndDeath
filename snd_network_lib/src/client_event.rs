@@ -11,6 +11,7 @@ pub enum ClientEvent {
     KeepAlive(u64),
     Step,
     OpenInv,
+    RqstUpdate,
     DropItem(String),
     InspectItem(String),
     Attack,
@@ -41,6 +42,15 @@ pub fn write_client_step(mut stream: &TcpStream) -> ::capnp::Result<()> {
     {
         let mut er = message.init_root::<c_event::Builder>();
         er.set_step(true);
+    }
+    serialize::write_message(&mut stream, &message)
+}
+
+pub fn write_client_request_update(mut stream: &TcpStream) -> ::capnp::Result<()> {
+    let mut message = Builder::new_default();
+    {
+        let mut er = message.init_root::<c_event::Builder>();
+        er.set_rqst_update(());
     }
     serialize::write_message(&mut stream, &message)
 }
@@ -108,6 +118,7 @@ pub fn read_client_event(mut stream: &TcpStream) -> ClientEvent {
     match w {
         c_event::Disconnect(_) => ClientEvent::Disconnect,
         c_event::Keepalive(a) => ClientEvent::KeepAlive(a),
+        c_event::RqstUpdate(_) => ClientEvent::RqstUpdate,
         c_event::Step(_) => ClientEvent::Step,
         c_event::OpenInv(_) => ClientEvent::OpenInv,
         c_event::DropItm(name) => ClientEvent::DropItem(name.unwrap().to_string()),

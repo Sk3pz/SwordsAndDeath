@@ -2,17 +2,21 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
-use log::{debug, error, info, trace, warn};
+use log::{error, info, trace, warn};
+use rand::{Rng, thread_rng};
+use rand_distr::{Normal, Distribution};
 use uuid::Uuid;
-use crate::{ACCEPTED_CLIENT_VERSION, KEEPALIVE_INTERVAL, MOTD, SERVER_VERSION};
-use crate::database::{Database, LoginFailReason};
+use crate::{ACCEPTED_CLIENT_VERSION, KEEPALIVE_INTERVAL, MOTD};
+use crate::database::{Database, LoginFailReason, PlayerValueDB};
 use snd_network_lib::to_epoch;
 use snd_network_lib::client_event::{ClientEvent, read_client_event};
 use snd_network_lib::entry_point_io::read_entry_point;
 use snd_network_lib::entry_response::{write_invalid_entry_response, write_ping_entry_response, write_valid_entry_response};
 use snd_network_lib::error_data::ErrorData;
 use snd_network_lib::item_data::ItemData;
-use snd_network_lib::server_event::{write_server_disconnect, write_server_error, write_server_inventory, write_server_keepalive};
+use snd_network_lib::player_data::PlayerData;
+use snd_network_lib::server_event::{write_server_disconnect, write_server_error, write_server_event, write_server_find_item, write_server_gain_exp, write_server_inventory, write_server_item_view, write_server_keepalive, write_server_update};
+use crate::item::{Item, ItemRarity, ItemType};
 use crate::player::Player;
 
 const LOG_TARGET: &str = "client_handler";
@@ -164,6 +168,8 @@ pub fn handle_connection(stream: TcpStream, db: Arc<Mutex<Database>>, tarc: Arc<
         return;
     }
 
+    info!(target:LOG_TARGET, "User {} logged in with the uuid {}", username, uuid);
+
     let mut last_keepalive = SystemTime::now();
     let mut expecting_keepalive = false;
     let mut ping = 0;
@@ -207,6 +213,7 @@ pub fn handle_connection(stream: TcpStream, db: Arc<Mutex<Database>>, tarc: Arc<
         match event {
             ClientEvent::Disconnect => {
                 // if the user sends that it disconnected, drop the connection properly
+                let _ = write_server_disconnect(&stream);
                 break;
             }
             ClientEvent::KeepAlive(a) => {
@@ -216,29 +223,170 @@ pub fn handle_connection(stream: TcpStream, db: Arc<Mutex<Database>>, tarc: Arc<
                     continue;
                 }
                 // calculate the ping
-                ping = a - to_epoch(last_keepalive).as_secs() - KEEPALIVE_INTERVAL;
+                ping = a - (to_epoch(last_keepalive).as_secs() - KEEPALIVE_INTERVAL);
                 trace!(target:LOG_TARGET, "Connection with {} has ping {}", ip.clone(), ping.clone());
                 // set flag
                 expecting_keepalive = false;
             }
+            ClientEvent::RqstUpdate => {
+                let pd = PlayerData {
+                    level: db.lock().unwrap().get_player_level(&uuid).unwrap(),
+                    exp: db.lock().unwrap().get_player_exp(&uuid).unwrap(),
+                    health: db.lock().unwrap().get_player_health(&uuid).unwrap(),
+                    steps: db.lock().unwrap().get_player_steps(&uuid).unwrap(),
+                    region: db.lock().unwrap().get_player_region(&uuid).unwrap(),
+                };
+
+                if let Err(e) = write_server_update(&stream, pd) {
+                    error!(target:LOG_TARGET, "Failed to write update to {} connected at ip {}: {}", username, ip, e);
+                    break;
+                }
+            }
             ClientEvent::Step => {
-                // todo(eric): game logic
+                // increment the player's total step count
+                if !db.lock().unwrap().inc_player_steps(&uuid) {
+                    warn!(target:LOG_TARGET, "Player {} took a step but the database failed to write steps", username);
+                }
+
+                // randomly select between gaining exp, finding an item, or having an encounter
+                // todo(eric): add finding items and encounters
+
+                let rng = thread_rng().gen_range(0..100);
+
+                match rng {
+                    // 60% - Gain EXP
+                    _ if rng < 80 => {
+                        // generate the amount of exp the player gets
+                        let normal_res = Normal::new(5.0, 3.2);
+                        if normal_res.is_err() {
+                            error!(target:LOG_TARGET,
+                        "Failed to create normal distribution for EXP generation for ip {}", ip);
+                            break;
+                        }
+                        let rnd = normal_res.unwrap().sample(&mut thread_rng()) as u32;
+                        let amt = rnd.min(10).max(2);
+                        if let Err(e) = write_server_gain_exp(&stream, amt.clone()) {
+                            error!(target:LOG_TARGET, "Failed to send exp gain to client: {}", e);
+                            break;
+                        }
+                        // update the player's exp in the database
+                        db.lock().unwrap().add_player_exp(&uuid, amt);
+                        // check if the player needs to level up
+                        db.lock().unwrap().check_levelup(&uuid);
+                    }
+                    // 10% - Find Item
+                    _ if rng < 90 => {
+                        let found_item = Item::new_rand(ItemType::rand(), &uuid,
+                                                        db.lock().unwrap().get_player_level(&uuid).unwrap_or(0),
+                                                        ItemRarity::new_rand());
+                        db.lock().unwrap().new_item(&found_item);
+                        if let Err(e) = write_server_find_item(&stream, found_item.as_data()) {
+                            error!(target:LOG_TARGET, "error sending found item to {}: {}", ip, e);
+                            break;
+                        }
+                    }
+                    // 10% - Encounter enemy
+                    _ if rng < 100 => {
+                        // todo(eric): add encounters
+                    }
+                    _ => { unreachable!() }
+                }
             }
             ClientEvent::OpenInv => {
                 // get the player's inventory from the database and send it to the client to display
                 let inv = db.lock().unwrap().get_player_items(&uuid);
                 if let Err(e) = write_server_inventory(&stream,
                                                        inv.unwrap_or(Vec::new())
-                                                           .iter().map(|i| { i.as_data() }).collect::<Vec<ItemData>>()) {
+                                                           .iter().map(|i| { i.as_data() })
+                                                           .collect::<Vec<ItemData>>()) {
                     error!(target:LOG_TARGET, "error sending inventory to {}: {}", ip, e);
                     break;
                 }
             }
             ClientEvent::DropItem(item_name) => {
-                // todo(eric): game logic
+                // avoid sql injections :)
+                let safe_name = item_name.escape_debug().to_string().replace("'", "");
+                // ensure the item exists
+                let item_uuid_op = db.lock().unwrap().item_uuid_from_name(safe_name.clone(), &uuid);
+                if item_uuid_op.is_none() {
+                    if let Err(e) = write_server_event(&stream, "The item you requested to drop does not exist!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+                let item_uuid = item_uuid_op.unwrap();
+                // ensure the player owns the item
+                // the item is known to exist, so this shouldn't fail
+                let owner_uuid = db.lock().unwrap().get_item_owner(&item_uuid).unwrap();
+                if owner_uuid != uuid {
+                    if let Err(e) = write_server_event(&stream,
+                                                       "You can only drop items that are in your inventory!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+                // get the item data
+                let item = db.lock().unwrap().get_item(&item_uuid);
+                if item.is_none() {
+                    if let Err(e) = write_server_event(&stream, "The item you requested to drop does not exist!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+
+                // delete the item
+                let i = item.unwrap();
+                if !db.lock().unwrap().drop_item(&i) {
+                    error!(target:LOG_TARGET, "Failed to delete item '{}' from player {}", i.name.clone(), username);
+                    let _ = write_server_error(&stream, ErrorData { msg: format!("Failed to delete the item!"), disconnect: false });
+                    continue; // not fatal
+                }
+
+                if let Err(e) = write_server_event(&stream, format!("You dropped your '{}'", i.name)) {
+                    error!("Failed to send event to {} with ip {}: {}", username, ip, e);
+                    break;
+                }
             }
             ClientEvent::InspectItem(item_name) => {
-                // todo(eric): send item data
+                // avoid sql injections :)
+                let safe_name = item_name.escape_debug().to_string().replace("'", "");
+                // ensure the item exists
+                let item_uuid_op = db.lock().unwrap().item_uuid_from_name(safe_name.clone(), &uuid);
+                if item_uuid_op.is_none() {
+                    if let Err(e) = write_server_event(&stream, "The item you requested to view does not exist!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+                let item_uuid = item_uuid_op.unwrap();
+                // ensure the player owns the item
+                // the item is known to exist, so this shouldn't fail
+                let owner_uuid = db.lock().unwrap().get_item_owner(&item_uuid).unwrap();
+                if owner_uuid != uuid {
+                    if let Err(e) = write_server_event(&stream,
+                                                       "You can currently only view items in your inventory!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+                // get the item data
+                let item = db.lock().unwrap().get_item(&item_uuid);
+                if item.is_none() {
+                    if let Err(e) = write_server_event(&stream, "The item you requested to view does not exist!") {
+                        error!(target:LOG_TARGET, "Failed to send event to {}: {}", ip, e);
+                        break;
+                    }
+                    continue;
+                }
+                if let Err(e) = write_server_item_view(&stream, item.unwrap().as_data()) {
+                    error!(target:LOG_TARGET, "Failed to send item data of {} to {}: {}", safe_name, ip, e);
+                    break;
+                }
             }
             ClientEvent::Attack => {
                 // todo(eric): game logic
@@ -247,7 +395,6 @@ pub fn handle_connection(stream: TcpStream, db: Arc<Mutex<Database>>, tarc: Arc<
                 // todo(eric): game logic
             }
             ClientEvent::Error(err) => {
-                // todo(eric): implement better error handling?
                 error!(target:LOG_TARGET, "{} encountered an error: {}", ip, err.msg);
                 if err.disconnect {
                     break;
